@@ -231,32 +231,50 @@ class EntityExtractor:
         return entities
 
     def _extract_by_rules(self, text: str) -> list[Entity]:
-        """基于规则抽取实体（后缀匹配）"""
+        """
+        基于规则抽取实体
+
+        使用已知实体词典，避免正则误匹配
+        """
         entities = []
+        seen = set()
 
-        # 抽取组织（以组织后缀结尾）
-        for suffix in ORG_SUFFIXES:
-            pattern = rf'[\u4e00-\u9fa5]{{2,10}}{suffix}'
-            matches = re.findall(pattern, text)
-            for match in matches:
+        # 已知组织名称（可扩展）
+        known_orgs = {
+            "阿里巴巴", "腾讯", "百度", "字节跳动", "华为", "小米",
+            "京东", "美团", "网易", "拼多多", "滴滴", "快手",
+            "北京大学", "清华大学", "浙江大学", "复旦大学",
+            "中国科学院", "中国工程院", "OpenAI", "Google", "Microsoft",
+        }
+
+        # 已知地点（可扩展）
+        known_locs = {
+            "北京", "上海", "广州", "深圳", "杭州", "南京",
+            "成都", "武汉", "西安", "重庆", "天津", "苏州",
+            "硅谷", "纽约", "伦敦", "东京",
+        }
+
+        # 检查已知组织
+        for org in known_orgs:
+            if org in text and org not in seen:
                 entities.append(Entity(
-                    name=match,
+                    name=org,
                     entity_type=EntityType.ORGANIZATION,
-                    properties={"source": "rule", "suffix": suffix},
-                    confidence=0.7,
+                    properties={"source": "known"},
+                    confidence=0.95,
                 ))
+                seen.add(org)
 
-        # 抽取地点（以地点后缀结尾）
-        for suffix in LOC_SUFFIXES:
-            pattern = rf'[\u4e00-\u9fa5]{{2,8}}{suffix}'
-            matches = re.findall(pattern, text)
-            for match in matches:
+        # 检查已知地点
+        for loc in known_locs:
+            if loc in text and loc not in seen:
                 entities.append(Entity(
-                    name=match,
+                    name=loc,
                     entity_type=EntityType.LOCATION,
-                    properties={"source": "rule", "suffix": suffix},
-                    confidence=0.7,
+                    properties={"source": "known"},
+                    confidence=0.95,
                 ))
+                seen.add(loc)
 
         return entities
 
