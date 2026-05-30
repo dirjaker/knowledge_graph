@@ -1,0 +1,31 @@
+# 知识图谱系统配置
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+
+database:
+  path: "data/graph.db"
+
+# 实体抽取配置
+extractor:
+  # 使用 jieba 分词
+  use_jieba: true
+  # 实体置信度阈值
+  min_confidence: 0.5
+  # 最大实体长度
+  max_entity_length: 20
+
+# 关系抽取配置
+relation:
+  # 共现窗口大小（句子数）
+  cooccurrence_window: 2
+  # 最小关系置信度
+  min_confidence: 0.3
+
+# 图算法配置
+algorithms:
+  # PageRank 阻尼系数
+  pagerank_damping: 0.85
+  # 社区发现分辨率
+  community_resolution: 1.0
