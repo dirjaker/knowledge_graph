@@ -1,3 +1,20 @@
+<div align="center">
+
+# 🕸️ Knowledge Graph
+
+### 知识图谱构建与应用
+
+[![实体](https://img.shields.io/badge/实体-抽取-blue?style=flat-square)]()
+[![关系](https://img.shields.io/badge/关系-推理-green?style=flat-square)]()
+[![框架](https://img.shields.io/badge/框架-Neo4j+LLM-orange?style=flat-square)]()
+[![更新](https://img.shields.io/badge/更新-2025.06-red?style=flat-square)]()
+
+*实体抽取 · 关系推理 · 图数据库 · LLM 辅助构建 · 可视化*
+
+</div>
+
+---
+
 # 🧠 知识图谱系统
 
 从文档自动构建知识图谱，支持可视化探索和自然语言问答。
@@ -215,3 +232,4 @@ knowledge_graph/
 ## 📄 License
 
 MIT
+
