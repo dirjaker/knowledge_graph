@@ -227,6 +227,53 @@ knowledge_graph/
 - **文档解析**: pymupdf + python-docx
 - **可视化**: Canvas (原生 JavaScript)
 
+## Web 管理面板
+
+提供独立的管理 Dashboard，可通过浏览器管理实体、关系和执行图算法分析。
+
+```bash
+# 启动管理面板
+python src/web/app.py
+
+# 访问 Dashboard
+# http://localhost:8002
+```
+
+### 管理面板 API
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/stats` | GET | 图谱统计 |
+| `/api/entities` | GET | 列出实体 |
+| `/api/entities/search?q=xxx` | GET | 搜索实体 |
+| `/api/entities` | POST | 创建实体 |
+| `/api/entities/{name}` | DELETE | 删除实体 |
+| `/api/relations` | GET | 列出关系 |
+| `/api/relations` | POST | 创建关系 |
+| `/api/query` | POST | 自然语言查询 |
+| `/api/graph/neighbors/{name}` | GET | 获取邻居 |
+| `/api/graph/path` | POST | 查找路径 |
+| `/api/documents/ingest` | POST | 导入文本 |
+| `/api/algorithms/centrality` | GET | 中心性分析 |
+| `/api/algorithms/communities` | GET | 社区发现 |
+| `/api/demo/load` | POST | 加载示例数据 |
+
+## macOS 桌面应用
+
+提供基于 tkinter 的本地桌面窗口，可一键启动 Web 服务。
+
+```bash
+python src/macos/app.py
+```
+
+## 打包 macOS .app
+
+```bash
+pip install py2app
+python packaging/py2app_setup.py py2app
+# 产出: dist/知识图谱系统.app
+```
+
 ## 📄 License
 
 MIT

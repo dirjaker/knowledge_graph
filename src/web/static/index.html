@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识图谱管理面板</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--text2:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:20px;font-weight:600;color:var(--accent)}
+.header .actions{display:flex;gap:8px}
+
+.layout{display:flex;min-height:calc(100vh - 56px)}
+.sidebar{width:320px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--border)}
+.sidebar-tab{flex:1;padding:10px;text-align:center;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);transition:all 0.15s}
+.sidebar-tab.active{color:var(--accent);border-color:var(--accent)}
+.tab-panel{display:none;flex:1;overflow-y:auto;padding:14px}
+.tab-panel.active{display:block}
+
+.main{flex:1;padding:24px;overflow-y:auto}
+
+.btn{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;transition:all 0.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{opacity:0.85}
+.btn-danger{color:var(--red);border-color:var(--red)}
+.btn-sm{padding:3px 10px;font-size:12px}
+
+.form-input{width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;margin-bottom:8px}
+.form-input:focus{border-color:var(--accent)}
+textarea.form-input{min-height:70px;resize:vertical;font-family:inherit}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.stat-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
+.stat-value{font-size:24px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+
+.entity-list,.relation-list{list-style:none}
+.entity-item,.relation-item{padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:13px;cursor:pointer;transition:border-color 0.15s;display:flex;align-items:center;justify-content:space-between}
+.entity-item:hover,.relation-item:hover{border-color:var(--accent)}
+
+.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500;margin-right:8px}
+.badge-person{background:#da3633;color:#fff}
+.badge-organization{background:#1f6feb;color:#fff}
+.badge-location{background:#238636;color:#fff}
+.badge-technology{background:#d29922;color:#fff}
+.badge-concept{background:#8957e5;color:#fff}
+.badge-other{background:#484f58;color:#fff}
+
+.search-box{margin-bottom:12px}
+
+.detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px}
+.detail-panel h3{color:var(--accent);margin-bottom:12px;font-size:16px}
+.detail-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(48,54,61,0.5);font-size:13px}
+.detail-label{color:var(--text2)}
+
+.query-area{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px}
+.query-result{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto}
+
+.algorithm-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.algo-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color 0.15s}
+.algo-card:hover{border-color:var(--accent)}
+.algo-card h4{color:var(--accent);margin-bottom:6px;font-size:14px}
+.algo-card p{font-size:12px;color:var(--text2)}
+
+.algo-result{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px;font-size:13px;max-height:300px;overflow-y:auto}
+.algo-result table{width:100%;border-collapse:collapse}
+.algo-result th,.algo-result td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.algo-result th{color:var(--text2);font-weight:500}
+
+.empty{text-align:center;padding:24px;color:var(--text2);font-size:13px}
+.footer{text-align:center;padding:16px;color:var(--text2);font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>知识图谱管理面板</h1>
+  <div class="actions">
+    <button class="btn btn-primary btn-sm" onclick="loadDemo()">加载示例数据</button>
+    <button class="btn btn-danger btn-sm" onclick="clearGraph()">清空图谱</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-tabs">
+      <div class="sidebar-tab active" data-tab="entities" onclick="switchTab(this)">实体</div>
+      <div class="sidebar-tab" data-tab="relations" onclick="switchTab(this)">关系</div>
+      <div class="sidebar-tab" data-tab="import" onclick="switchTab(this)">导入</div>
+    </div>
+
+    <div id="tab-entities" class="tab-panel active">
+      <div class="search-box">
+        <input class="form-input" id="entity-search" placeholder="搜索实体..." oninput="searchEntities(this.value)">
+      </div>
+      <ul class="entity-list" id="entity-list">
+        <li class="empty">加载中...</li>
+      </ul>
+    </div>
+
+    <div id="tab-relations" class="tab-panel">
+      <ul class="relation-list" id="relation-list">
+        <li class="empty">加载中...</li>
+      </ul>
+    </div>
+
+    <div id="tab-import" class="tab-panel">
+      <textarea class="form-input" id="import-text" placeholder="输入文本，自动抽取实体和关系..."></textarea>
+      <input class="form-input" id="import-title" placeholder="标题（可选）">
+      <button class="btn btn-primary" onclick="importText()" style="width:100%">导入文本</button>
+      <div id="import-result" style="margin-top:12px;font-size:12px;color:var(--text2)"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- 统计 -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-item"><div class="stat-value" id="s-entities">-</div><div class="stat-label">实体数量</div></div>
+      <div class="stat-item"><div class="stat-value" id="s-relations">-</div><div class="stat-label">关系数量</div></div>
+      <div class="stat-item"><div class="stat-value" id="s-density">-</div><div class="stat-label">图密度</div></div>
+      <div class="stat-item"><div class="stat-value" id="s-components">-</div><div class="stat-label">连通分量</div></div>
+    </div>
+
+    <!-- 实体详情 -->
+    <div class="detail-panel" id="entity-detail" style="display:none">
+      <h3 id="detail-name">-</h3>
+      <div class="detail-row"><span class="detail-label">类型</span><span id="detail-type">-</span></div>
+      <div class="detail-row"><span class="detail-label">描述</span><span id="detail-desc">-</span></div>
+      <div class="detail-row"><span class="detail-label">置信度</span><span id="detail-conf">-</span></div>
+      <div class="detail-row"><span class="detail-label">关系数</span><span id="detail-rels">-</span></div>
+    </div>
+
+    <!-- 自然语言查询 -->
+    <div class="query-area">
+      <h3 style="color:var(--accent);margin-bottom:12px">自然语言查询</h3>
+      <div style="display:flex;gap:8px">
+        <input class="form-input" id="query-input" placeholder="输入问题，如: 张三和阿里巴巴是什么关系？" style="margin-bottom:0;flex:1">
+        <button class="btn btn-primary" onclick="queryGraph()">查询</button>
+      </div>
+      <div class="query-result" id="query-result" style="display:none"></div>
+    </div>
+
+    <!-- 图算法 -->
+    <h3 style="color:var(--accent);margin-bottom:12px">图算法分析</h3>
+    <div class="algorithm-cards">
+      <div class="algo-card" onclick="runAlgo('degree')">
+        <h4>度中心性</h4>
+        <p>找出连接数最多的节点</p>
+      </div>
+      <div class="algo-card" onclick="runAlgo('betweenness')">
+        <h4>介数中心性</h4>
+        <p>找出最重要的桥梁节点</p>
+      </div>
+      <div class="algo-card" onclick="runAlgo('closeness')">
+        <h4>接近中心性</h4>
+        <p>找出最中心的节点</p>
+      </div>
+      <div class="algo-card" onclick="runAlgo('pagerank')">
+        <h4>PageRank</h4>
+        <p>找出最重要的节点</p>
+      </div>
+      <div class="algo-card" onclick="runAlgo('communities')">
+        <h4>社区发现</h4>
+        <p>检测图中的社区结构</p>
+      </div>
+      <div class="algo-card" onclick="runAlgo('important')">
+        <h4>综合重要节点</h4>
+        <p>多维度重要性分析</p>
+      </div>
+    </div>
+    <div class="algo-result" id="algo-result" style="display:none"></div>
+  </div>
+</div>
+
+<div class="footer">知识图谱系统 -- 管理面板</div>
+
+<script>
+const API = '';
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function switchTab(el){
+  document.querySelectorAll('.sidebar-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+el.dataset.tab).classList.add('active');
+}
+
+async function loadStats(){
+  try{
+    const res=await fetch(API+'/api/stats');
+    const d=await res.json();
+    document.getElementById('s-entities').textContent=d.entity_count||0;
+    document.getElementById('s-relations').textContent=d.relation_count||0;
+    document.getElementById('s-density').textContent=d.density!=null?d.density.toFixed(4):'-';
+    document.getElementById('s-components').textContent=d.components||0;
+  }catch(e){console.error(e)}
+}
+
+async function loadEntities(){
+  try{
+    const res=await fetch(API+'/api/entities?limit=200');
+    const data=await res.json();
+    renderEntities(data);
+  }catch(e){console.error(e)}
+}
+
+function renderEntities(data){
+  const list=document.getElementById('entity-list');
+  if(!data.length){list.innerHTML='<li class="empty">暂无实体</li>';return}
+  list.innerHTML=data.map(e=>`
+    <li class="entity-item" onclick="showEntityDetail('${esc(e.name)}')">
+      <div><span class="badge badge-${esc(e.entity_type)}">${esc(e.entity_type)}</span>${esc(e.name)}</div>
+      <span style="font-size:11px;color:var(--text2)">${(e.confidence||0).toFixed(2)}</span>
+    </li>
+  `).join('');
+}
+
+async function searchEntities(q){
+  if(!q){loadEntities();return}
+  try{
+    const res=await fetch(API+'/api/entities/search?q='+encodeURIComponent(q));
+    const data=await res.json();
+    renderEntities(data);
+  }catch(e){console.error(e)}
+}
+
+async function loadRelations(){
+  try{
+    const res=await fetch(API+'/api/relations?limit=200');
+    const data=await res.json();
+    const list=document.getElementById('relation-list');
+    if(!data.length){list.innerHTML='<li class="empty">暂无关系</li>';return}
+    list.innerHTML=data.map(r=>`
+      <li class="relation-item">
+        <div style="flex:1"><strong>${esc(r.source)}</strong> <span style="color:var(--text2)">[${esc(r.type)}]</span> <strong>${esc(r.target)}</strong></div>
+        <span style="font-size:11px;color:var(--text2)">w:${r.weight}</span>
+      </li>
+    `).join('');
+  }catch(e){console.error(e)}
+}
+
+async function showEntityDetail(name){
+  try{
+    const res=await fetch(API+'/api/entities/'+encodeURIComponent(name));
+    const d=await res.json();
+    const panel=document.getElementById('entity-detail');
+    panel.style.display='block';
+    document.getElementById('detail-name').textContent=d.name;
+    document.getElementById('detail-type').textContent=d.entity_type;
+    document.getElementById('detail-desc').textContent=d.description||'无';
+    document.getElementById('detail-conf').textContent=(d.confidence||0).toFixed(2);
+    document.getElementById('detail-rels').textContent=d.relations?d.relations.length:0;
+  }catch(e){console.error(e)}
+}
+
+async function queryGraph(){
+  const q=document.getElementById('query-input').value.trim();
+  if(!q)return;
+  const el=document.getElementById('query-result');
+  el.style.display='block';
+  el.textContent='查询中...';
+  try{
+    const res=await fetch(API+'/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const d=await res.json();
+    let text='回答: '+d.answer+'\n\n';
+    if(d.entities&&d.entities.length)text+='相关实体: '+d.entities.map(e=>e.name).join(', ')+'\n';
+    if(d.path&&d.path.length)text+='推理路径: '+d.path.join(' -> ')+'\n';
+    text+='置信度: '+(d.confidence||0).toFixed(2);
+    el.textContent=text;
+  }catch(e){el.textContent='查询失败: '+e.message}
+}
+
+async function runAlgo(method){
+  const el=document.getElementById('algo-result');
+  el.style.display='block';
+  el.textContent='分析中...';
+  try{
+    let data;
+    if(method==='communities'){
+      const res=await fetch(API+'/api/algorithms/communities');
+      data=await res.json();
+      el.innerHTML='<pre>'+esc(JSON.stringify(data,null,2))+'</pre>';
+    }else if(method==='important'){
+      const res=await fetch(API+'/api/algorithms/important?top_k=10');
+      data=await res.json();
+      el.innerHTML='<pre>'+esc(JSON.stringify(data,null,2))+'</pre>';
+    }else{
+      const res=await fetch(API+'/api/algorithms/centrality?method='+method+'&top_k=10');
+      data=await res.json();
+      if(data.results&&data.results.length){
+        let html='<table><tr><th>排名</th><th>节点</th><th>得分</th></tr>';
+        data.results.forEach((r,i)=>{html+='<tr><td>'+(i+1)+'</td><td>'+esc(r[0]||r.name||'')+'</td><td>'+(r[1]||r.score||0).toFixed(4)+'</td></tr>'});
+        html+='</table>';
+        el.innerHTML=html;
+      }else{el.innerHTML='<pre>'+esc(JSON.stringify(data,null,2))+'</pre>'}
+    }
+  }catch(e){el.textContent='分析失败: '+e.message}
+}
+
+async function importText(){
+  const text=document.getElementById('import-text').value.trim();
+  if(!text)return;
+  const title=document.getElementById('import-title').value.trim()||'text_input';
+  const el=document.getElementById('import-result');
+  el.textContent='导入中...';
+  try{
+    const res=await fetch(API+'/api/documents/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,title})});
+    const d=await res.json();
+    el.innerHTML='抽取实体: <strong>'+d.entities_extracted+'</strong> 个, 关系: <strong>'+d.relations_extracted+'</strong> 条';
+    loadEntities();loadRelations();loadStats();
+  }catch(e){el.textContent='导入失败: '+e.message}
+}
+
+async function loadDemo(){
+  try{
+    await fetch(API+'/api/demo/load',{method:'POST'});
+    loadEntities();loadRelations();loadStats();
+  }catch(e){alert('加载失败')}
+}
+
+async function clearGraph(){
+  if(!confirm('确定清空图谱？此操作不可恢复。'))return;
+  try{
+    await fetch(API+'/api/clear',{method:'POST'});
+    loadEntities();loadRelations();loadStats();
+    document.getElementById('entity-detail').style.display='none';
+  }catch(e){alert('清空失败')}
+}
+
+// 初始化
+loadStats();loadEntities();loadRelations();
+setInterval(()=>{loadStats();},10000);
+</script>
+</body>
+</html>
