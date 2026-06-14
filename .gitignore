@@ -9,3 +9,7 @@ data/
 dist/
 build/
 .pytest_cache/
+
+# VitePress build output
+docs/.vitepress/dist/
+docs/.vitepress/cache/
