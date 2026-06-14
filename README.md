@@ -1,18 +1,31 @@
-# 知识图谱系统
+<div align="center">
 
-> 知识图谱系统：文档解析、实体抽取、关系抽取、图谱可视化、自然语言问答
+<img src="assets/banner.svg" width="100%" alt="知识图谱系统">
 
-`Python` `FastAPI` `Neo4j` `D3.js`
+<br>
+
+### 🕸️ 知识图谱系统
+
+[![Stars](https://img.shields.io/github/stars/dirjaker/knowledge_graph?style=flat-square&label=Stars&color=FFD700)](https://github.com/dirjaker/knowledge_graph/stargazers)
+[![Forks](https://img.shields.io/github/forks/dirjaker/knowledge_graph?style=flat-square&label=Forks&color=4A90D9)](https://github.com/dirjaker/knowledge_graph/network/members)
+[![Contributors](https://img.shields.io/github/contributors/dirjaker/knowledge_graph?style=flat-square&label=Contributors&color=8B4513)](https://github.com/dirjaker/knowledge_graph/graphs/contributors)
+[![License](https://img.shields.io/github/license/dirjaker/knowledge_graph?style=flat-square&label=License&color=20B2AA)](https://github.com/dirjaker/knowledge_graph/blob/dev/LICENSE)
+
+</div>
 
 ---
 
 ## ✨ 功能特性
 
-- 文档解析
-- 实体抽取
-- 关系抽取
-- 图谱可视化
-- 自然语言问答
+| 功能 | 描述 |
+|------|------|
+| 📄 **文档解析** | 支持 PDF、Word、Markdown 等多格式文档解析 |
+| 🏷️ **实体抽取** | 基于 LLM 的命名实体识别和分类 |
+| 🔗 **关系抽取** | 自动识别实体间的语义关系 |
+| 🎨 **图谱可视化** | 基于 D3.js 的交互式知识图谱展示 |
+| 💬 **自然语言问答** | 用自然语言查询知识图谱中的信息 |
+| 📊 **图谱统计** | 实体和关系的数量统计和分布分析 |
+
 
 ## 🚀 快速开始
 
@@ -32,26 +45,36 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## 📁 项目结构
-
-```
-knowledge_graph/
-├── ...
-└── README.md
-```
-
 ## 🛠️ 技术栈
 
-Python, FastAPI, Neo4j, D3.js
+| 层级 | 技术 |
+|------|------|
+| **后端** | FastAPI, SQLAlchemy |
+| **图数据库** | Neo4j |
+| **NLP** | LLM, spaCy |
+| **前端** | D3.js, Vue.js |
 
-## 📝 标签
+## 📝 开发日志
 
-`knowledge-graph` `nlp` `entity-extraction` `visualization` `python` `fastapi`
+- [x] 文档解析器
+- [x] 实体抽取引擎
+- [x] 关系抽取引擎
+- [x] 图谱可视化
+- [x] 自然语言问答
+- [ ] 增量更新
+- [ ] 多图谱管理
+- [ ] 图谱导出
 
 ## 📄 许可证
 
-MIT License
+[MIT License](LICENSE)
 
 ---
 
+<div align="center">
+
 🔗 **GitHub**: [dirjaker/knowledge_graph](https://github.com/dirjaker/knowledge_graph)
+
+⭐ 如果这个项目对你有帮助，请给一个 Star 支持一下！
+
+</div>
