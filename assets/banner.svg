@@ -5,11 +5,11 @@
       <stop offset="50%" style="stop-color:#111111"/>
       <stop offset="100%" style="stop-color:#0d0d0d"/>
     </linearGradient>
-    <radialGradient id="glow1" cx="18%" cy="55%" r="30%">
+    <radialGradient id="glow1" cx="16%" cy="55%" r="28%">
       <stop offset="0%" style="stop-color:#4A90D9;stop-opacity:0.15"/>
       <stop offset="100%" style="stop-color:#4A90D9;stop-opacity:0"/>
     </radialGradient>
-    <radialGradient id="glow2" cx="30%" cy="30%" r="20%">
+    <radialGradient id="glow2" cx="28%" cy="30%" r="18%">
       <stop offset="0%" style="stop-color:#4A90D9;stop-opacity:0.08"/>
       <stop offset="100%" style="stop-color:#4A90D9;stop-opacity:0"/>
     </radialGradient>
@@ -18,83 +18,77 @@
   <rect width="1200" height="400" fill="url(#glow1)"/>
   <rect width="1200" height="400" fill="url(#glow2)"/>
 
-  <circle cx="338" cy="180" r="2.4" fill="white" opacity="0.3"/>
-  <circle cx="457" cy="158" r="3.3" fill="white" opacity="0.5"/>
-  <circle cx="296" cy="27" r="2.9" fill="white" opacity="0.5"/>
-  <circle cx="336" cy="317" r="2.9" fill="white" opacity="0.7"/>
-  <circle cx="486" cy="208" r="2.1" fill="white" opacity="0.8"/>
-  <circle cx="200" cy="324" r="2.9" fill="white" opacity="0.6"/>
-  <circle cx="361" cy="87" r="1.8" fill="white" opacity="0.6"/>
-  <circle cx="72" cy="166" r="2.3" fill="white" opacity="0.8"/>
-  <circle cx="163" cy="174" r="1.8" fill="white" opacity="0.5"/>
-  <circle cx="497" cy="367" r="2.8" fill="white" opacity="0.6"/>
-  <circle cx="330" cy="75" r="2.6" fill="white" opacity="0.5"/>
-  <circle cx="273" cy="357" r="3.0" fill="white" opacity="0.6"/>
-  <circle cx="341" cy="151" r="2.8" fill="white" opacity="0.4"/>
-  <circle cx="114" cy="138" r="2.8" fill="white" opacity="0.6"/>
-  <circle cx="272" cy="211" r="2.0" fill="white" opacity="0.7"/>
-  <circle cx="39" cy="255" r="2.9" fill="white" opacity="0.5"/>
-  <circle cx="105" cy="56" r="1.8" fill="white" opacity="0.8"/>
-  <circle cx="156" cy="178" r="2.7" fill="white" opacity="0.7"/>
-  <circle cx="30" cy="213" r="2.2" fill="white" opacity="0.5"/>
-  <circle cx="38" cy="351" r="1.8" fill="white" opacity="0.7"/>
-  <circle cx="463" cy="259" r="3.1" fill="white" opacity="0.5"/>
-  <circle cx="374" cy="275" r="2.2" fill="white" opacity="0.6"/>
-  <circle cx="168" cy="166" r="3.2" fill="white" opacity="0.5"/>
-  <circle cx="437" cy="143" r="3.2" fill="white" opacity="0.5"/>
-  <circle cx="443" cy="231" r="3.2" fill="white" opacity="0.8"/>
-  <circle cx="330" cy="173" r="1.7" fill="white" opacity="0.5"/>
-  <circle cx="120" cy="102" r="1.8" fill="white" opacity="0.7"/>
-  <circle cx="326" cy="284" r="2.3" fill="white" opacity="0.5"/>
-  <circle cx="478" cy="253" r="2.2" fill="white" opacity="0.5"/>
-  <circle cx="333" cy="346" r="1.7" fill="white" opacity="0.5"/>
-  <circle cx="366" cy="140" r="2.2" fill="white" opacity="0.6"/>
-  <circle cx="250" cy="135" r="1.7" fill="white" opacity="0.7"/>
-  <circle cx="477" cy="275" r="2.9" fill="white" opacity="0.3"/>
-  <circle cx="403" cy="298" r="1.8" fill="white" opacity="0.6"/>
-  <circle cx="247" cy="204" r="2.7" fill="white" opacity="0.5"/>
-  <circle cx="109" cy="161" r="1.9" fill="white" opacity="0.5"/>
-  <circle cx="103" cy="59" r="3.2" fill="white" opacity="0.7"/>
-  <circle cx="354" cy="212" r="2.5" fill="white" opacity="0.7"/>
-  <circle cx="214" cy="172" r="2.9" fill="white" opacity="0.7"/>
-  <circle cx="387" cy="71" r="2.4" fill="white" opacity="0.5"/>
-  <circle cx="96" cy="81" r="3.3" fill="white" opacity="0.7"/>
-  <circle cx="330" cy="180" r="3.0" fill="white" opacity="0.4"/>
-  <circle cx="363" cy="120" r="2.5" fill="white" opacity="0.7"/>
-  <circle cx="409" cy="323" r="3.3" fill="white" opacity="0.6"/>
-  <circle cx="203" cy="135" r="3.2" fill="white" opacity="0.6"/>
-  <circle cx="459" cy="307" r="1.6" fill="white" opacity="0.7"/>
-  <circle cx="411" cy="52" r="2.0" fill="white" opacity="0.3"/>
-  <circle cx="94" cy="34" r="3.3" fill="white" opacity="0.8"/>
-  <circle cx="457" cy="184" r="2.7" fill="white" opacity="0.7"/>
-  <circle cx="411" cy="176" r="2.3" fill="white" opacity="0.7"/>
-  <circle cx="442" cy="48" r="3.1" fill="white" opacity="0.6"/>
-  <circle cx="297" cy="86" r="3.1" fill="white" opacity="0.5"/>
-  <circle cx="206" cy="94" r="1.5" fill="white" opacity="0.4"/>
-  <circle cx="208" cy="277" r="2.0" fill="white" opacity="0.5"/>
-  <circle cx="58" cy="226" r="2.3" fill="white" opacity="0.3"/>
+  <circle cx="356" cy="287" r="1.7" fill="white" opacity="0.4"/>
+  <circle cx="335" cy="295" r="3.2" fill="white" opacity="0.5"/>
+  <circle cx="438" cy="139" r="2.1" fill="white" opacity="0.3"/>
+  <circle cx="242" cy="93" r="2.7" fill="white" opacity="0.6"/>
+  <circle cx="148" cy="85" r="2.8" fill="white" opacity="0.6"/>
+  <circle cx="263" cy="281" r="2.4" fill="white" opacity="0.6"/>
+  <circle cx="401" cy="55" r="3.1" fill="white" opacity="0.6"/>
+  <circle cx="205" cy="54" r="3.0" fill="white" opacity="0.7"/>
+  <circle cx="395" cy="166" r="3.1" fill="white" opacity="0.5"/>
+  <circle cx="137" cy="148" r="1.6" fill="white" opacity="0.3"/>
+  <circle cx="107" cy="292" r="2.9" fill="white" opacity="0.7"/>
+  <circle cx="411" cy="49" r="2.3" fill="white" opacity="0.5"/>
+  <circle cx="250" cy="134" r="2.9" fill="white" opacity="0.4"/>
+  <circle cx="130" cy="212" r="2.6" fill="white" opacity="0.3"/>
+  <circle cx="96" cy="286" r="1.9" fill="white" opacity="0.6"/>
+  <circle cx="425" cy="274" r="3.0" fill="white" opacity="0.7"/>
+  <circle cx="100" cy="107" r="2.0" fill="white" opacity="0.7"/>
+  <circle cx="139" cy="316" r="2.2" fill="white" opacity="0.3"/>
+  <circle cx="288" cy="132" r="2.5" fill="white" opacity="0.5"/>
+  <circle cx="238" cy="177" r="1.8" fill="white" opacity="0.4"/>
+  <circle cx="175" cy="114" r="3.1" fill="white" opacity="0.5"/>
+  <circle cx="307" cy="38" r="2.6" fill="white" opacity="0.5"/>
+  <circle cx="248" cy="27" r="2.4" fill="white" opacity="0.4"/>
+  <circle cx="445" cy="149" r="3.5" fill="white" opacity="0.5"/>
+  <circle cx="233" cy="137" r="1.8" fill="white" opacity="0.8"/>
+  <circle cx="128" cy="80" r="2.5" fill="white" opacity="0.6"/>
+  <circle cx="90" cy="273" r="2.1" fill="white" opacity="0.4"/>
+  <circle cx="66" cy="327" r="2.0" fill="white" opacity="0.6"/>
+  <circle cx="65" cy="201" r="1.7" fill="white" opacity="0.4"/>
+  <circle cx="114" cy="54" r="1.7" fill="white" opacity="0.7"/>
+  <circle cx="315" cy="79" r="3.1" fill="white" opacity="0.5"/>
+  <circle cx="444" cy="363" r="2.7" fill="white" opacity="0.7"/>
+  <circle cx="376" cy="45" r="2.0" fill="white" opacity="0.4"/>
+  <circle cx="95" cy="53" r="2.0" fill="white" opacity="0.5"/>
+  <circle cx="50" cy="170" r="2.4" fill="white" opacity="0.6"/>
+  <circle cx="440" cy="175" r="2.6" fill="white" opacity="0.8"/>
+  <circle cx="142" cy="341" r="1.7" fill="white" opacity="0.7"/>
+  <circle cx="332" cy="327" r="2.3" fill="white" opacity="0.7"/>
+  <circle cx="181" cy="63" r="2.4" fill="white" opacity="0.6"/>
+  <circle cx="430" cy="244" r="1.6" fill="white" opacity="0.4"/>
+  <circle cx="138" cy="231" r="2.7" fill="white" opacity="0.4"/>
+  <circle cx="33" cy="225" r="3.5" fill="white" opacity="0.8"/>
+  <circle cx="251" cy="46" r="2.1" fill="white" opacity="0.6"/>
+  <circle cx="309" cy="69" r="3.4" fill="white" opacity="0.8"/>
+  <circle cx="40" cy="312" r="2.5" fill="white" opacity="0.4"/>
+  <circle cx="413" cy="320" r="3.2" fill="white" opacity="0.6"/>
+  <circle cx="275" cy="276" r="3.0" fill="white" opacity="0.6"/>
+  <circle cx="191" cy="247" r="1.7" fill="white" opacity="0.7"/>
+  <circle cx="110" cy="25" r="2.5" fill="white" opacity="0.4"/>
+  <circle cx="444" cy="36" r="3.5" fill="white" opacity="0.4"/>
 
-  <line x1="222" y1="276" x2="265" y2="255" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="100" y1="241" x2="180" y2="199" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="118" y1="87" x2="181" y2="53" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="305" y1="63" x2="347" y2="65" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="191" y1="212" x2="277" y2="206" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="101" y1="98" x2="190" y2="134" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="250" y1="149" x2="306" y2="153" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="156" y1="167" x2="224" y2="211" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="144" y1="150" x2="187" y2="121" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="238" y1="234" x2="284" y2="187" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="275" y1="218" x2="356" y2="235" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="283" y1="208" x2="353" y2="224" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="298" y1="121" x2="367" y2="74" stroke="white" stroke-width="0.5" opacity="0.12"/>
-  <line x1="220" y1="298" x2="261" y2="266" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="235" y1="84" x2="282" y2="55" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="329" y1="143" x2="409" y2="115" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="249" y1="323" x2="292" y2="356" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="352" y1="293" x2="425" y2="279" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="182" y1="342" x2="241" y2="348" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="161" y1="331" x2="223" y2="292" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="339" y1="230" x2="392" y2="202" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="358" y1="119" x2="420" y2="135" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="268" y1="223" x2="309" y2="209" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="60" y1="323" x2="114" y2="317" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="210" y1="88" x2="262" y2="56" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <line x1="110" y1="75" x2="185" y2="101" stroke="white" stroke-width="0.5" opacity="0.12"/>
 
-  <line x1="533" y1="50" x2="533" y2="350" stroke="white" stroke-width="0.5" opacity="0.12"/>
+  <!-- 分隔线 4:6 位置 -->
+  <line x1="480" y1="50" x2="480" y2="350" stroke="white" stroke-width="0.5" opacity="0.12"/>
 
-  <text x="560" y="120" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="56" font-weight="800" fill="white" letter-spacing="4">KNOWLEDGE GRAPH</text>
-  <text x="560" y="185" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" font-size="22" font-weight="500" fill="white" opacity="0.9" letter-spacing="3">知识图谱系统</text>
-  <text x="560" y="225" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" font-weight="300" fill="white" opacity="0.5" letter-spacing="1.5">文档解析 · 实体抽取 · 关系抽取 · 图谱可视化 · 自然语言问答</text>
-  <text x="560" y="275" font-family="'SF Mono','Fira Code','Consolas',monospace" font-size="12" fill="white" opacity="0.4" letter-spacing="1.5">FastAPI · Neo4j · D3.js</text>
-  <line x1="560" y1="315" x2="1150" y2="315" stroke="white" stroke-width="0.5" opacity="0.1"/>
-  <text x="560" y="345" font-family="'SF Mono','Fira Code','Consolas',monospace" font-size="10" fill="white" opacity="0.3" letter-spacing="1">KNOWLEDGE GRAPH · NLP · NEO4J · VISUALIZATION</text>
+  <text x="510" y="120" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="64" font-weight="800" fill="white" letter-spacing="5">KNOWLEDGE GRAPH</text>
+  <text x="510" y="185" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" font-size="22" font-weight="500" fill="white" opacity="0.9" letter-spacing="3">知识图谱系统</text>
+  <text x="510" y="225" font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" font-weight="300" fill="white" opacity="0.5" letter-spacing="1.5">文档解析 · 实体抽取 · 关系抽取 · 图谱可视化 · 自然语言问答</text>
+  <text x="510" y="275" font-family="'SF Mono','Fira Code','Consolas',monospace" font-size="12" fill="white" opacity="0.4" letter-spacing="1.5">FastAPI · Neo4j · D3.js</text>
+  <line x1="510" y1="315" x2="1170" y2="315" stroke="white" stroke-width="0.5" opacity="0.1"/>
+  <text x="510" y="345" font-family="'SF Mono','Fira Code','Consolas',monospace" font-size="10" fill="white" opacity="0.3" letter-spacing="1">KNOWLEDGE GRAPH · NLP · NEO4J · VISUALIZATION</text>
 </svg>
