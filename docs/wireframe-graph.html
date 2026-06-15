@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识图谱可视化系统 - 图谱视图</title>
+<style>
+/* ========== RESET & BASE ========== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #0f1117; color: #e0e0e0; font-size: 14px; }
+
+/* ========== CSS VARIABLES ========== */
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d24;
+  --surface2: #22252d;
+  --border: #2a2d35;
+  --text: #e0e0e0;
+  --text-dim: #8a8d95;
+  --text-bright: #ffffff;
+  --accent: #4a9eff;
+  --accent-dim: rgba(74,158,255,0.15);
+  --accent-hover: #6ab4ff;
+  --danger: #ff4d6a;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --person: #f472b6;
+  --organization: #60a5fa;
+  --location: #4ade80;
+  --technology: #22d3ee;
+  --concept: #c084fc;
+  --nav-width: 56px;
+  --sidebar-width: 250px;
+  --detail-width: 300px;
+  --toolbar-height: 48px;
+  --statusbar-height: 28px;
+}
+
+/* ========== SCROLLBAR ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3a3d45; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a4d55; }
+
+/* ========== LAYOUT ========== */
+.app-container { display: flex; width: 100%; height: 100%; }
+
+/* ========== NAVIGATION RAIL ========== */
+.nav-rail {
+  width: var(--nav-width);
+  min-width: var(--nav-width);
+  background: #14161c;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  z-index: 100;
+}
+.nav-logo {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px; color: #fff;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(74,158,255,0.3);
+}
+.nav-items { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.nav-item {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  color: var(--text-dim);
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: var(--accent-dim); color: var(--accent); }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  width: 3px; height: 20px;
+  background: var(--accent);
+  border-radius: 0 3px 3px 0;
+}
+.nav-item svg { width: 20px; height: 20px; }
+.nav-item-label {
+  font-size: 10px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.nav-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 4px; align-items: center; }
+
+/* ========== MAIN AREA ========== */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;
+}
+
+/* ========== TOOLBAR ========== */
+.toolbar {
+  height: var(--toolbar-height);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 10px;
+  z-index: 50;
+  flex-shrink: 0;
+}
+.toolbar-search {
+  position: relative;
+  flex: 0 0 280px;
+}
+.toolbar-search input {
+  width: 100%;
+  height: 32px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px 0 34px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.toolbar-search input:focus { border-color: var(--accent); }
+.toolbar-search input::placeholder { color: var(--text-dim); }
+.toolbar-search svg {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  color: var(--text-dim);
+}
+.toolbar-divider { width: 1px; height: 24px; background: var(--border); }
+.toolbar-group { display: flex; align-items: center; gap: 6px; }
+.toolbar-select {
+  height: 32px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 28px 0 10px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8d95' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 0.2s;
+}
+.toolbar-select:focus { border-color: var(--accent); }
+.toolbar-btn {
+  height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.toolbar-btn:hover { background: var(--surface2); border-color: #3a3d45; }
+.toolbar-btn svg { width: 16px; height: 16px; }
+.toolbar-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.toolbar-btn.primary:hover { background: var(--accent-hover); }
+.toolbar-spacer { flex: 1; }
+.toolbar-stats {
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex; gap: 12px;
+}
+.toolbar-stats span { display: flex; align-items: center; gap: 4px; }
+.toolbar-stats .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+/* ========== CONTENT AREA ========== */
+.content-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ========== LEFT SIDEBAR ========== */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  transition: margin-left 0.3s ease;
+}
+.sidebar-header {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-search {
+  position: relative;
+  margin-bottom: 10px;
+}
+.sidebar-search input {
+  width: 100%;
+  height: 30px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 10px 0 30px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.sidebar-search input:focus { border-color: var(--accent); }
+.sidebar-search input::placeholder { color: var(--text-dim); }
+.sidebar-search svg {
+  position: absolute;
+  left: 8px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  color: var(--text-dim);
+}
+.sidebar-filters {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.filter-chip {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 4px;
+}
+.filter-chip:hover { border-color: #3a3d45; color: var(--text); }
+.filter-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.filter-chip .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+.filter-chip .chip-count { color: var(--text-dim); font-size: 10px; }
+
+.sidebar-count {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-count strong { color: var(--text); }
+
+.sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+.entity-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-left: 3px solid transparent;
+}
+.entity-item:hover { background: var(--surface2); }
+.entity-item.active {
+  background: var(--accent-dim);
+  border-left-color: var(--accent);
+}
+.entity-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.entity-info { flex: 1; min-width: 0; }
+.entity-name {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.entity-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 1px;
+}
+.entity-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* ========== GRAPH CANVAS ========== */
+.graph-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+.graph-canvas svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Graph SVG styles */
+.node-group { cursor: pointer; }
+.node-circle {
+  stroke-width: 2;
+  transition: r 0.2s, stroke-width 0.2s;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));
+}
+.node-group:hover .node-circle {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(74,158,255,0.4));
+}
+.node-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-family: inherit;
+  pointer-events: none;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.edge-path {
+  fill: none;
+  stroke: #3a3d45;
+  stroke-width: 1.2;
+  transition: stroke 0.2s, stroke-width 0.2s;
+}
+.edge-path:hover {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.edge-label {
+  fill: var(--text-dim);
+  font-size: 9px;
+  font-family: inherit;
+  text-anchor: middle;
+  pointer-events: none;
+}
+.edge-label-bg {
+  fill: var(--bg);
+  opacity: 0.85;
+}
+
+/* Node highlight on hover */
+.node-group:hover .node-label { fill: #fff; }
+
+/* ========== MINIMAP ========== */
+.minimap {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 180px;
+  height: 120px;
+  background: rgba(26,29,36,0.9);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 30;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.minimap-header {
+  height: 22px;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.minimap canvas { display: block; width: 100%; height: calc(100% - 22px); }
+.minimap-viewport {
+  position: absolute;
+  border: 1.5px solid var(--accent);
+  background: rgba(74,158,255,0.06);
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+/* ========== GRAPH CONTROLS (zoom) ========== */
+.graph-controls {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 30;
+}
+.graph-ctrl-btn {
+  width: 34px; height: 34px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s;
+}
+.graph-ctrl-btn:hover { background: var(--surface2); color: var(--accent); }
+.graph-ctrl-btn svg { width: 16px; height: 16px; }
+
+/* ========== RIGHT DETAIL PANEL ========== */
+.detail-panel {
+  width: var(--detail-width);
+  min-width: var(--detail-width);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  transition: margin-right 0.3s ease, opacity 0.3s;
+  overflow: hidden;
+}
+.detail-panel.hidden {
+  margin-right: calc(-1 * var(--detail-width));
+  opacity: 0;
+}
+.detail-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.detail-close {
+  width: 28px; height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.detail-close:hover { background: var(--surface2); color: var(--text); }
+.detail-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.detail-title-area { flex: 1; min-width: 0; }
+.detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 4px;
+}
+.detail-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.detail-section {
+  margin-bottom: 20px;
+}
+.detail-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.detail-section-title svg { width: 14px; height: 14px; }
+.detail-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.detail-props { display: flex; flex-direction: column; gap: 8px; }
+.detail-prop {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-prop-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.detail-prop-value {
+  font-size: 13px;
+  color: var(--text);
+  padding: 6px 10px;
+  background: var(--bg);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.detail-relations { display: flex; flex-direction: column; gap: 6px; }
+.detail-relation-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.detail-relation-item:hover { border-color: var(--accent); background: var(--accent-dim); }
+.detail-rel-arrow { color: var(--text-dim); font-size: 10px; flex-shrink: 0; width: 16px; text-align: center; }
+.detail-rel-label { font-size: 11px; color: var(--accent); flex-shrink: 0; }
+.detail-rel-node {
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.detail-rel-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.detail-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+}
+.detail-action-btn {
+  flex: 1;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: all 0.15s;
+}
+.detail-action-btn:hover { background: var(--surface2); border-color: #3a3d45; }
+.detail-action-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,106,0.1); }
+.detail-action-btn svg { width: 14px; height: 14px; }
+
+/* ========== STATUS BAR ========== */
+.statusbar {
+  height: var(--statusbar-height);
+  background: #14161c;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  gap: 20px;
+  flex-shrink: 0;
+  z-index: 50;
+}
+.statusbar-item { display: flex; align-items: center; gap: 5px; }
+.statusbar-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.statusbar-spacer { flex: 1; }
+.statusbar-right { display: flex; gap: 16px; }
+
+/* ========== TOOLTIP ========== */
+.tooltip {
+  position: absolute;
+  padding: 8px 12px;
+  background: #2a2d35;
+  border: 1px solid #3a3d45;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tooltip.visible { opacity: 1; }
+.tooltip-type { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+/* ========== ANIMATIONS ========== */
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease; }
+
+/* ========== LEGEND ========== */
+.legend {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(26,29,36,0.9);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  z-index: 30;
+  font-size: 11px;
+}
+.legend-title { color: var(--text-dim); margin-bottom: 6px; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.legend-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; color: var(--text); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- ========== NAVIGATION RAIL ========== -->
+  <nav class="nav-rail">
+    <div class="nav-logo">KG</div>
+    <div class="nav-items">
+      <div class="nav-item active" title="图谱视图">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/>
+          <line x1="8.5" y1="7.5" x2="15.5" y2="16.5"/><line x1="15.5" y1="7.5" x2="8.5" y2="16.5"/>
+        </svg>
+      </div>
+      <div class="nav-item" title="数据导入">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="nav-item" title="查询中心">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+        </svg>
+      </div>
+      <div class="nav-item" title="图谱分析">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </div>
+      <div class="nav-item" title="设置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="nav-bottom">
+      <div class="nav-item" title="帮助">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== MAIN AREA ========== -->
+  <div class="main-area">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="搜索实体、关系或属性..." />
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <select class="toolbar-select">
+          <option>全部类型</option>
+          <option>人物</option>
+          <option>组织机构</option>
+          <option>地理位置</option>
+          <option>技术</option>
+          <option>概念</option>
+        </select>
+        <select class="toolbar-select">
+          <option>力导向布局</option>
+          <option>圆形布局</option>
+          <option>层次布局</option>
+          <option>网格布局</option>
+        </select>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" title="重置视图">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          重置
+        </button>
+        <button class="toolbar-btn" title="全屏">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
+      </div>
+      <div class="toolbar-spacer"></div>
+      <div class="toolbar-stats">
+        <span><span class="dot"></span> 已连接</span>
+        <span>自动保存: 刚刚</span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content-area">
+      <!-- Left Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="过滤实体..." />
+          </div>
+          <div class="sidebar-filters">
+            <span class="filter-chip active">全部 <span class="chip-count">20</span></span>
+            <span class="filter-chip"><span class="chip-dot" style="background:var(--person)"></span>人物</span>
+            <span class="filter-chip"><span class="chip-dot" style="background:var(--organization)"></span>机构</span>
+            <span class="filter-chip"><span class="chip-dot" style="background:var(--location)"></span>地点</span>
+            <span class="filter-chip"><span class="chip-dot" style="background:var(--technology)"></span>技术</span>
+            <span class="filter-chip"><span class="chip-dot" style="background:var(--concept)"></span>概念</span>
+          </div>
+        </div>
+        <div class="sidebar-count">
+          显示 <strong>20</strong> 个实体，<strong>30</strong> 条关系
+        </div>
+        <div class="sidebar-list" id="entityList">
+          <!-- Entities populated by JS -->
+        </div>
+      </aside>
+
+      <!-- Graph Canvas -->
+      <div class="graph-canvas" id="graphCanvas">
+        <svg id="graphSvg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#3a3d45"/>
+            </marker>
+            <marker id="arrowhead-hover" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#4a9eff"/>
+            </marker>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="graphGroup">
+            <g id="edgesGroup"></g>
+            <g id="edgeLabelsGroup"></g>
+            <g id="nodesGroup"></g>
+          </g>
+        </svg>
+
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-title">图例</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--person)"></span>人物</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--organization)"></span>组织机构</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--location)"></span>地理位置</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--technology)"></span>技术</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--concept)"></span>概念</div>
+        </div>
+
+        <!-- Graph Controls -->
+        <div class="graph-controls">
+          <div class="graph-ctrl-btn" id="zoomInBtn" title="放大">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="graph-ctrl-btn" id="zoomOutBtn" title="缩小">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="graph-ctrl-btn" id="fitBtn" title="适应画布">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          </div>
+        </div>
+
+        <!-- Minimap -->
+        <div class="minimap">
+          <div class="minimap-header">导航地图</div>
+          <canvas id="minimapCanvas" width="180" height="98"></canvas>
+          <div class="minimap-viewport" style="top:30px;left:40px;width:60px;height:40px;"></div>
+        </div>
+      </div>
+
+      <!-- Right Detail Panel -->
+      <aside class="detail-panel" id="detailPanel">
+        <div class="detail-header">
+          <div class="detail-icon" id="detailIcon" style="background:rgba(244,114,182,0.15);color:var(--person);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="detail-title-area">
+            <div class="detail-title" id="detailName">张伟</div>
+            <span class="detail-type-badge" id="detailBadge" style="background:rgba(244,114,182,0.15);color:var(--person);">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--person)"></span>人物
+            </span>
+          </div>
+          <button class="detail-close" id="detailClose" title="关闭">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="detail-body">
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              描述
+            </div>
+            <div class="detail-desc">
+              知名技术企业家，星辰科技创始人兼首席执行官。在人工智能和大数据领域有深厚的技术背景和丰富的创业经验，多次获得行业创新奖项。
+            </div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              属性
+            </div>
+            <div class="detail-props">
+              <div class="detail-prop">
+                <span class="detail-prop-label">出生年份</span>
+                <div class="detail-prop-value">1985</div>
+              </div>
+              <div class="detail-prop">
+                <span class="detail-prop-label">国籍</span>
+                <div class="detail-prop-value">中国</div>
+              </div>
+              <div class="detail-prop">
+                <span class="detail-prop-label">教育背景</span>
+                <div class="detail-prop-value">清华大学计算机科学博士</div>
+              </div>
+              <div class="detail-prop">
+                <span class="detail-prop-label">标签</span>
+                <div class="detail-prop-value">创始人 · AI专家 · 企业家</div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-section">
+            <div class="detail-section-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              关联关系 <span style="color:var(--accent);font-size:10px;margin-left:auto;font-weight:400">6条</span>
+            </div>
+            <div class="detail-relations">
+              <div class="detail-relation-item">
+                <span class="detail-rel-dot" style="background:var(--organization)"></span>
+                <span class="detail-rel-node">星辰科技</span>
+                <span class="detail-rel-label">创始人</span>
+                <span class="detail-rel-arrow">→</span>
+              </div>
+              <div class="detail-relation-item">
+                <span class="detail-rel-dot" style="background:var(--concept)"></span>
+                <span class="detail-rel-node">人工智能</span>
+                <span class="detail-rel-label">研究领域</span>
+                <span class="detail-rel-arrow">→</span>
+              </div>
+              <div class="detail-relation-item">
+                <span class="detail-rel-dot" style="background:var(--person)"></span>
+                <span class="detail-rel-node">李娜</span>
+                <span class="detail-rel-label">合作伙伴</span>
+                <span class="detail-rel-arrow">↔</span>
+              </div>
+              <div class="detail-relation-item">
+                <span class="detail-rel-dot" style="background:var(--organization)"></span>
+                <span class="detail-rel-node">清华大学</span>
+                <span class="detail-rel-label">毕业于</span>
+                <span class="detail-rel-arrow">←</span>
+              </div>
+              <div class="detail-relation-item">
+                <span class="detail-rel-dot" style="background:var(--technology)"></span>
+                <span class="detail-rel-node">深度学习</span>
+                <span class="detail-rel-label">擅长</span>
+                <span class="detail-rel-arrow">→</span>
+              </div>
+              <div class="detail-relation-item">
+                <span class="detail-rel-dot" style="background:var(--location)"></span>
+                <span class="detail-rel-node">北京</span>
+                <span class="detail-rel-label">位于</span>
+                <span class="detail-rel-arrow">→</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-footer">
+          <button class="detail-action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            编辑
+          </button>
+          <button class="detail-action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            展开
+          </button>
+          <button class="detail-action-btn danger">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            删除
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="statusbar">
+      <div class="statusbar-item">
+        <span class="statusbar-dot" style="background:var(--success)"></span>
+        就绪
+      </div>
+      <div class="statusbar-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/></svg>
+        节点: <strong style="color:var(--text);margin-left:2px">20</strong>
+      </div>
+      <div class="statusbar-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        边: <strong style="color:var(--text);margin-left:2px">30</strong>
+      </div>
+      <div class="statusbar-item">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        缩放: <strong style="color:var(--text);margin-left:2px" id="zoomLevel">100%</strong>
+      </div>
+      <div class="statusbar-spacer"></div>
+      <div class="statusbar-right">
+        <div class="statusbar-item">布局: 力导向</div>
+        <div class="statusbar-item">数据库: Neo4j 5.12</div>
+        <div class="statusbar-item">v2.1.0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div id="tooltipName"></div>
+  <div class="tooltip-type" id="tooltipType"></div>
+</div>
+
+<script>
+// ========== DATA ==========
+const typeConfig = {
+  person:       { color: '#f472b6', label: '人物',   icon: '👤' },
+  organization: { color: '#60a5fa', label: '组织机构', icon: '🏢' },
+  location:     { color: '#4ade80', label: '地理位置', icon: '📍' },
+  technology:   { color: '#22d3ee', label: '技术',   icon: '⚙️' },
+  concept:      { color: '#c084fc', label: '概念',   icon: '💡' },
+};
+
+const nodes = [
+  { id: 0,  name: '张伟',     type: 'person',       x: 480, y: 300 },
+  { id: 1,  name: '星辰科技', type: 'organization',  x: 650, y: 220 },
+  { id: 2,  name: '人工智能', type: 'concept',       x: 350, y: 180 },
+  { id: 3,  name: '北京',     type: 'location',      x: 550, y: 430 },
+  { id: 4,  name: '深度学习', type: 'technology',    x: 220, y: 300 },
+  { id: 5,  name: '李娜',     type: 'person',        x: 680, y: 400 },
+  { id: 6,  name: '清华大学', type: 'organization',  x: 380, y: 450 },
+  { id: 7,  name: '大数据',   type: 'technology',    x: 180, y: 180 },
+  { id: 8,  name: '上海',     type: 'location',      x: 820, y: 320 },
+  { id: 9,  name: '云计算',   type: 'technology',    x: 140, y: 420 },
+  { id: 10, name: '王芳',     type: 'person',        x: 830, y: 180 },
+  { id: 11, name: '华为',     type: 'organization',  x: 780, y: 100 },
+  { id: 12, name: '物联网',   type: 'technology',    x: 300, y: 80  },
+  { id: 13, name: '机器学习', type: 'concept',       x: 120, y: 100 },
+  { id: 14, name: '深圳',     type: 'location',      x: 700, y: 500 },
+  { id: 15, name: '赵磊',     type: 'person',        x: 500, y: 120 },
+  { id: 16, name: '区块链',   type: 'technology',    x: 900, y: 430 },
+  { id: 17, name: '自然语言处理', type: 'concept',   x: 250, y: 500 },
+  { id: 18, name: '腾讯',     type: 'organization',  x: 450, y: 550 },
+  { id: 19, name: '网络安全', type: 'concept',       x: 600, y: 80  },
+];
+
+const edges = [
+  { source: 0,  target: 1,  label: '创始人' },
+  { source: 0,  target: 2,  label: '研究领域' },
+  { source: 0,  target: 5,  label: '合作伙伴' },
+  { source: 0,  target: 6,  label: '毕业于' },
+  { source: 0,  target: 4,  label: '擅长' },
+  { source: 0,  target: 3,  label: '位于' },
+  { source: 1,  target: 8,  label: '总部在' },
+  { source: 1,  target: 2,  label: '专注领域' },
+  { source: 1,  target: 14, label: '分部在' },
+  { source: 2,  target: 4,  label: '包含' },
+  { source: 2,  target: 7,  label: '相关技术' },
+  { source: 2,  target: 12, label: '应用于' },
+  { source: 2,  target: 13, label: '子领域' },
+  { source: 3,  target: 6,  label: '位于' },
+  { source: 4,  target: 13, label: '基础于' },
+  { source: 4,  target: 17, label: '应用于' },
+  { source: 5,  target: 1,  label: '任职于' },
+  { source: 5,  target: 14, label: '位于' },
+  { source: 5,  target: 10, label: '同事' },
+  { source: 7,  target: 9,  label: '相关' },
+  { source: 8,  target: 11, label: '总部在' },
+  { source: 10, target: 11, label: '任职于' },
+  { source: 10, target: 8,  label: '位于' },
+  { source: 11, target: 12, label: '研发' },
+  { source: 11, target: 19, label: '投入' },
+  { source: 12, target: 9,  label: '依赖' },
+  { source: 15, target: 19, label: '研究' },
+  { source: 15, target: 2,  label: '研究领域' },
+  { source: 16, target: 14, label: '发展中心' },
+  { source: 17, target: 18, label: '研究方向' },
+];
+
+// ========== RENDER GRAPH ==========
+const svg = document.getElementById('graphSvg');
+const edgesGroup = document.getElementById('edgesGroup');
+const edgeLabelsGroup = document.getElementById('edgeLabelsGroup');
+const nodesGroup = document.getElementById('nodesGroup');
+
+function getEdgePath(source, target) {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  // Curved path using quadratic bezier
+  const mx = (source.x + target.x) / 2;
+  const my = (source.y + target.y) / 2;
+  // Perpendicular offset for curve
+  const nx = -dy / dist * 20;
+  const ny = dx / dist * 20;
+  const cx = mx + nx;
+  const cy = my + ny;
+  return `M ${source.x} ${source.y} Q ${cx} ${cy} ${target.x} ${target.y}`;
+}
+
+function renderEdges() {
+  edgesGroup.innerHTML = '';
+  edgeLabelsGroup.innerHTML = '';
+  edges.forEach((edge, i) => {
+    const s = nodes[edge.source];
+    const t = nodes[edge.target];
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', getEdgePath(s, t));
+    path.setAttribute('class', 'edge-path');
+    path.setAttribute('marker-end', 'url(#arrowhead)');
+    path.dataset.index = i;
+    edgesGroup.appendChild(path);
+
+    // Edge label
+    const dx = t.x - s.x;
+    const dy = t.y - s.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const mx = (s.x + t.x) / 2;
+    const my = (s.y + t.y) / 2;
+    const nx = -dy / dist * 20;
+    const ny = dx / dist * 20;
+    const lx = mx + nx;
+    const ly = my + ny;
+
+    // Background rect for label
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    const textLen = edge.label.length * 9 + 8;
+    bg.setAttribute('x', lx - textLen / 2);
+    bg.setAttribute('y', ly - 8);
+    bg.setAttribute('width', textLen);
+    bg.setAttribute('height', 16);
+    bg.setAttribute('rx', 3);
+    bg.setAttribute('class', 'edge-label-bg');
+    edgeLabelsGroup.appendChild(bg);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', lx);
+    text.setAttribute('y', ly + 4);
+    text.setAttribute('class', 'edge-label');
+    text.textContent = edge.label;
+    edgeLabelsGroup.appendChild(text);
+  });
+}
+
+function renderNodes() {
+  nodesGroup.innerHTML = '';
+  nodes.forEach((node, i) => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'node-group');
+    g.setAttribute('transform', `translate(${node.x},${node.y})`);
+    g.dataset.index = i;
+
+    // Outer glow ring on hover
+    const glowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    glowCircle.setAttribute('r', '22');
+    glowCircle.setAttribute('fill', 'none');
+    glowCircle.setAttribute('stroke', typeConfig[node.type].color);
+    glowCircle.setAttribute('stroke-width', '1');
+    glowCircle.setAttribute('opacity', '0');
+    glowCircle.setAttribute('class', 'node-glow');
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('r', '16');
+    circle.setAttribute('fill', typeConfig[node.type].color);
+    circle.setAttribute('fill-opacity', '0.2');
+    circle.setAttribute('stroke', typeConfig[node.type].color);
+    circle.setAttribute('stroke-width', '2');
+    circle.setAttribute('class', 'node-circle');
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('y', '30');
+    label.setAttribute('class', 'node-label');
+    label.textContent = node.name;
+
+    // Inner icon text
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    icon.setAttribute('text-anchor', 'middle');
+    icon.setAttribute('dominant-baseline', 'central');
+    icon.setAttribute('font-size', '12');
+    icon.setAttribute('pointer-events', 'none');
+    icon.textContent = typeConfig[node.type].icon;
+
+    g.appendChild(glowCircle);
+    g.appendChild(circle);
+    g.appendChild(icon);
+    g.appendChild(label);
+
+    // Hover
+    g.addEventListener('mouseenter', () => {
+      circle.setAttribute('r', '18');
+      circle.setAttribute('fill-opacity', '0.35');
+      glowCircle.setAttribute('opacity', '0.3');
+      label.style.fill = '#fff';
+      // Highlight connected edges
+      document.querySelectorAll('.edge-path').forEach(p => {
+        const idx = parseInt(p.dataset.index);
+        const e = edges[idx];
+        if (e.source === i || e.target === i) {
+          p.setAttribute('stroke', typeConfig[node.type].color);
+          p.setAttribute('stroke-width', '2');
+          p.setAttribute('marker-end', 'url(#arrowhead-hover)');
+        }
+      });
+    });
+    g.addEventListener('mouseleave', () => {
+      circle.setAttribute('r', '16');
+      circle.setAttribute('fill-opacity', '0.2');
+      glowCircle.setAttribute('opacity', '0');
+      label.style.fill = '';
+      document.querySelectorAll('.edge-path').forEach(p => {
+        p.setAttribute('stroke', '#3a3d45');
+        p.setAttribute('stroke-width', '1.2');
+        p.setAttribute('marker-end', 'url(#arrowhead)');
+      });
+    });
+
+    // Click to show detail
+    g.addEventListener('click', () => showDetail(node));
+
+    nodesGroup.appendChild(g);
+  });
+}
+
+// ========== ENTITY LIST ==========
+function renderEntityList() {
+  const list = document.getElementById('entityList');
+  list.innerHTML = '';
+  nodes.forEach((node, i) => {
+    const div = document.createElement('div');
+    div.className = 'entity-item' + (i === 0 ? ' active' : '');
+    div.innerHTML = `
+      <span class="entity-dot" style="background:${typeConfig[node.type].color}"></span>
+      <div class="entity-info">
+        <div class="entity-name">${node.name}</div>
+        <div class="entity-meta">
+          <span class="entity-badge" style="background:${typeConfig[node.type].color}22;color:${typeConfig[node.type].color}">${typeConfig[node.type].label}</span>
+          ${edges.filter(e => e.source === i || e.target === i).length} 条关系
+        </div>
+      </div>
+    `;
+    div.addEventListener('click', () => {
+      document.querySelectorAll('.entity-item').forEach(el => el.classList.remove('active'));
+      div.classList.add('active');
+      showDetail(node);
+    });
+    list.appendChild(div);
+  });
+}
+
+// ========== DETAIL PANEL ==========
+function showDetail(node) {
+  const panel = document.getElementById('detailPanel');
+  panel.classList.remove('hidden');
+  const cfg = typeConfig[node.type];
+  document.getElementById('detailName').textContent = node.name;
+  document.getElementById('detailIcon').style.background = cfg.color + '25';
+  document.getElementById('detailIcon').style.color = cfg.color;
+  document.getElementById('detailBadge').style.background = cfg.color + '25';
+  document.getElementById('detailBadge').style.color = cfg.color;
+  document.getElementById('detailBadge').innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:${cfg.color}"></span>${cfg.label}`;
+  // Highlight in list
+  document.querySelectorAll('.entity-item').forEach((el, idx) => {
+    el.classList.toggle('active', nodes[idx].id === node.id);
+  });
+}
+
+document.getElementById('detailClose').addEventListener('click', () => {
+  document.getElementById('detailPanel').classList.add('hidden');
+});
+
+// ========== MINIMAP ==========
+function renderMinimap() {
+  const canvas = document.getElementById('minimapCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Calculate bounds
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x); maxY = Math.max(maxY, n.y);
+  });
+  const pad = 40;
+  minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+  const scaleX = w / (maxX - minX);
+  const scaleY = h / (maxY - minY);
+  const scale = Math.min(scaleX, scaleY);
+  const offsetX = (w - (maxX - minX) * scale) / 2;
+  const offsetY = (h - (maxY - minY) * scale) / 2;
+
+  // Draw edges
+  ctx.strokeStyle = '#3a3d45';
+  ctx.lineWidth = 0.5;
+  edges.forEach(e => {
+    const s = nodes[e.source];
+    const t = nodes[e.target];
+    ctx.beginPath();
+    ctx.moveTo((s.x - minX) * scale + offsetX, (s.y - minY) * scale + offsetY);
+    ctx.lineTo((t.x - minX) * scale + offsetX, (t.y - minY) * scale + offsetY);
+    ctx.stroke();
+  });
+
+  // Draw nodes
+  nodes.forEach(n => {
+    const x = (n.x - minX) * scale + offsetX;
+    const y = (n.y - minY) * scale + offsetY;
+    ctx.fillStyle = typeConfig[n.type].color;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// ========== ZOOM CONTROLS ==========
+let currentZoom = 1;
+const graphGroup = document.getElementById('graphGroup');
+function applyZoom() {
+  const canvas = document.getElementById('graphCanvas');
+  const cw = canvas.clientWidth;
+  const ch = canvas.clientHeight;
+  const cx = cw / 2;
+  const cy = ch / 2;
+  // Calculate center of graph
+  let gx = 0, gy = 0;
+  nodes.forEach(n => { gx += n.x; gy += n.y; });
+  gx /= nodes.length; gy /= nodes.length;
+  const tx = cx - gx * currentZoom;
+  const ty = cy - gy * currentZoom;
+  graphGroup.setAttribute('transform', `translate(${tx},${ty}) scale(${currentZoom})`);
+  document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+}
+
+document.getElementById('zoomInBtn').addEventListener('click', () => {
+  currentZoom = Math.min(3, currentZoom * 1.2);
+  applyZoom();
+});
+document.getElementById('zoomOutBtn').addEventListener('click', () => {
+  currentZoom = Math.max(0.2, currentZoom / 1.2);
+  applyZoom();
+});
+document.getElementById('fitBtn').addEventListener('click', () => {
+  currentZoom = 1;
+  applyZoom();
+});
+
+// ========== INIT ==========
+renderEdges();
+renderNodes();
+renderEntityList();
+renderMinimap();
+setTimeout(() => applyZoom(), 50);
+
+// ========== DRAG NODES ==========
+let dragNode = null;
+let dragOffset = { x: 0, y: 0 };
+const graphCanvas = document.getElementById('graphCanvas');
+
+nodesGroup.addEventListener('mousedown', (e) => {
+  const g = e.target.closest('.node-group');
+  if (!g) return;
+  const idx = parseInt(g.dataset.index);
+  dragNode = idx;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(graphGroup.getScreenCTM().inverse());
+  dragOffset.x = svgP.x - nodes[idx].x;
+  dragOffset.y = svgP.y - nodes[idx].y;
+  e.preventDefault();
+});
+
+graphCanvas.addEventListener('mousemove', (e) => {
+  if (dragNode === null) return;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgP = pt.matrixTransform(graphGroup.getScreenCTM().inverse());
+  nodes[dragNode].x = svgP.x - dragOffset.x;
+  nodes[dragNode].y = svgP.y - dragOffset.y;
+  renderEdges();
+  renderNodes();
+  renderMinimap();
+});
+
+graphCanvas.addEventListener('mouseup', () => { dragNode = null; });
+graphCanvas.addEventListener('mouseleave', () => { dragNode = null; });
+
+// Mouse wheel zoom
+graphCanvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  currentZoom = Math.min(3, Math.max(0.2, currentZoom * delta));
+  applyZoom();
+});
+</script>
+
+</body>
+</html>

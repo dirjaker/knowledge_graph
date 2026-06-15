@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识图谱系统 - 数据导入</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #0f1117; color: #e1e4e8; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Left Navigation Rail */
+  .nav-rail { width: 64px; background: #161b22; border-right: 1px solid #30363d; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 4px; flex-shrink: 0; }
+  .nav-logo { width: 40px; height: 40px; background: linear-gradient(135deg, #58a6ff, #3fb950); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 20px; }
+  .nav-item { width: 48px; height: 48px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: background .2s; color: #8b949e; font-size: 10px; text-decoration: none; }
+  .nav-item:hover { background: #21262d; color: #c9d1d9; }
+  .nav-item.active { background: rgba(88,166,255,.15); color: #58a6ff; }
+  .nav-item svg { width: 22px; height: 22px; }
+  .nav-spacer { flex: 1; }
+  .nav-bottom { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+  /* Main Content */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .header { height: 56px; border-bottom: 1px solid #30363d; display: flex; align-items: center; padding: 0 24px; gap: 12px; flex-shrink: 0; background: #161b22; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #e1e4e8; }
+  .header .subtitle { font-size: 13px; color: #8b949e; }
+
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid #30363d; margin-bottom: 24px; }
+  .tab { padding: 10px 20px; font-size: 14px; color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; }
+  .tab:hover { color: #c9d1d9; background: rgba(255,255,255,.03); }
+  .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Textarea Tab */
+  .text-area { width: 100%; min-height: 320px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; color: #e1e4e8; font-size: 14px; line-height: 1.6; resize: vertical; font-family: inherit; }
+  .text-area::placeholder { color: #484f58; }
+  .text-area:focus { outline: none; border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88,166,255,.15); }
+  .format-hint { font-size: 12px; color: #484f58; margin-top: 8px; }
+  .text-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+  /* Buttons */
+  .btn { padding: 8px 20px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { background: #30363d; }
+  .btn-primary { background: #238636; border-color: rgba(240,246,252,.1); color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-accent { background: #1f6feb; border-color: rgba(240,246,252,.1); color: #fff; }
+  .btn-accent:hover { background: #388bfd; }
+
+  /* Upload Tab */
+  .drop-zone { border: 2px dashed #30363d; border-radius: 12px; padding: 60px 24px; text-align: center; cursor: pointer; transition: all .2s; background: #161b22; }
+  .drop-zone:hover, .drop-zone.dragover { border-color: #58a6ff; background: rgba(88,166,255,.05); }
+  .drop-zone-icon { font-size: 48px; margin-bottom: 12px; opacity: .6; }
+  .drop-zone p { font-size: 15px; color: #8b949e; margin-bottom: 8px; }
+  .drop-zone .formats { font-size: 12px; color: #484f58; }
+
+  .file-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .file-item { display: flex; align-items: center; gap: 12px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 16px; }
+  .file-icon { font-size: 20px; }
+  .file-info { flex: 1; }
+  .file-name { font-size: 14px; color: #e1e4e8; }
+  .file-meta { font-size: 12px; color: #8b949e; margin-top: 2px; }
+  .file-status { font-size: 12px; padding: 3px 10px; border-radius: 20px; }
+  .file-status.done { background: rgba(63,185,80,.15); color: #3fb950; }
+  .file-status.uploading { background: rgba(88,166,255,.15); color: #58a6ff; }
+
+  /* Manual Tab */
+  .form-section { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .form-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .form-section h3 .icon { font-size: 18px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .form-group label { display: block; font-size: 12px; color: #8b949e; margin-bottom: 6px; font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; background: #0f1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #e1e4e8; font-size: 13px; font-family: inherit; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #58a6ff; }
+  .form-group select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  .form-group textarea { min-height: 72px; resize: vertical; }
+  .form-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+  /* Processing State */
+  .processing-overlay { position: fixed; inset: 0; background: rgba(15,17,23,.8); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .processing-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 40px 48px; text-align: center; }
+  .spinner { width: 48px; height: 48px; border: 3px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .processing-card p { font-size: 15px; color: #c9d1d9; }
+  .processing-card .detail { font-size: 12px; color: #8b949e; margin-top: 6px; }
+  .progress-bar { width: 240px; height: 4px; background: #30363d; border-radius: 2px; margin: 12px auto 0; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #58a6ff, #3fb950); border-radius: 2px; animation: progress 2s ease-in-out infinite; width: 40%; }
+  @keyframes progress { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }
+
+  /* Results Preview */
+  .results-section { background: #161b22; border: 1px solid #30363d; border-radius: 10px; margin-top: 24px; }
+  .results-header { padding: 16px 20px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+  .results-header h3 { font-size: 15px; font-weight: 600; }
+  .results-header .stats { font-size: 12px; color: #8b949e; display: flex; gap: 16px; }
+  .results-header .stats span { display: flex; align-items: center; gap: 4px; }
+  .results-body { padding: 20px; }
+
+  .results-sub { margin-bottom: 20px; }
+  .results-sub:last-child { margin-bottom: 0; }
+  .results-sub h4 { font-size: 13px; color: #8b949e; font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+  .entity-item, .relation-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; transition: background .15s; }
+  .entity-item:hover, .relation-item:hover { background: #21262d; }
+  .entity-item input[type="checkbox"], .relation-item input[type="checkbox"] { accent-color: #58a6ff; width: 16px; height: 16px; cursor: pointer; }
+
+  .entity-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+  .entity-badge.person { background: rgba(210,105,65,.15); color: #d26941; }
+  .entity-badge.org { background: rgba(88,166,255,.15); color: #58a6ff; }
+  .entity-badge.location { background: rgba(63,185,80,.15); color: #3fb950; }
+  .entity-badge.tech { background: rgba(188,140,255,.15); color: #bc8cff; }
+  .entity-badge.event { background: rgba(219,171,9,.15); color: #dbab09; }
+  .entity-badge.concept { background: rgba(121,192,255,.15); color: #79c0ff; }
+
+  .entity-type { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,.08); color: #8b949e; margin-left: 4px; }
+
+  .relation-arrow { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #c9d1d9; }
+  .relation-arrow .entity-ref { padding: 2px 10px; border-radius: 4px; background: rgba(88,166,255,.1); color: #79c0ff; font-size: 12px; }
+  .relation-arrow .rel-type { color: #8b949e; font-size: 12px; padding: 2px 8px; background: rgba(255,255,255,.05); border-radius: 4px; }
+
+  .results-actions { padding: 16px 20px; border-top: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; }
+  .select-all { font-size: 13px; color: #58a6ff; cursor: pointer; display: flex; align-items: center; gap: 6px; background: none; border: none; }
+  .select-all:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- Left Navigation Rail -->
+<nav class="nav-rail">
+  <div class="nav-logo">KG</div>
+  <a class="nav-item" title="知识图谱">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><line x1="8" y1="7.5" x2="10.5" y2="16"/><line x1="16" y1="7.5" x2="13.5" y2="16"/><line x1="8.5" y1="6" x2="15.5" y2="6"/></svg>
+    <span>图谱</span>
+  </a>
+  <a class="nav-item active" title="数据导入">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+    <span>导入</span>
+  </a>
+  <a class="nav-item" title="实体管理">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m-7.07-15.07l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4m-15.07 7.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+    <span>实体</span>
+  </a>
+  <a class="nav-item" title="搜索">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+    <span>搜索</span>
+  </a>
+  <a class="nav-item" title="设置">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <span>设置</span>
+  </a>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="header">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+    <h1>数据导入</h1>
+    <span class="subtitle">通过多种方式导入知识到图谱</span>
+  </div>
+
+  <div class="content">
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" data-tab="text">📝 文本粘贴</div>
+      <div class="tab" data-tab="file">📁 文件上传</div>
+      <div class="tab" data-tab="manual">✏️ 手动添加</div>
+    </div>
+
+    <!-- Tab 1: Text Paste -->
+    <div class="tab-panel active" id="tab-text">
+      <textarea class="text-area" placeholder="粘贴或输入文本内容...&#10;&#10;支持粘贴新闻文章、论文摘要、技术文档等文本内容，系统将自动识别并提取其中的实体和关系。"></textarea>
+      <p class="format-hint">💡 支持纯文本格式，每段文字建议不超过 5000 字以获得最佳分析效果。可使用换行分隔不同主题内容。</p>
+      <div class="text-actions">
+        <button class="btn btn-primary" onclick="showProcessing()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/></svg>
+          开始分析
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab 2: File Upload -->
+    <div class="tab-panel" id="tab-file">
+      <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon">📤</div>
+        <p>拖拽文件到此处或点击上传</p>
+        <div class="formats">支持格式：TXT、PDF、DOCX、MD、JSON、CSV（单文件最大 20MB）</div>
+      </div>
+      <div class="file-list">
+        <div class="file-item">
+          <span class="file-icon">📄</span>
+          <div class="file-info">
+            <div class="file-name">research_paper_2024.txt</div>
+            <div class="file-meta">2.3 MB · 上传于 2 分钟前</div>
+          </div>
+          <span class="file-status done">✓ 已完成</span>
+        </div>
+        <div class="file-item">
+          <span class="file-icon">📊</span>
+          <div class="file-info">
+            <div class="file-name">knowledge_base.json</div>
+            <div class="file-meta">856 KB · 上传中...</div>
+          </div>
+          <span class="file-status uploading">⏳ 上传中</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Manual Add -->
+    <div class="tab-panel" id="tab-manual">
+      <!-- Entity Form -->
+      <div class="form-section">
+        <h3><span class="icon">🔵</span> 添加实体</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>实体名称 <span style="color:#f85149">*</span></label>
+            <input type="text" placeholder="输入实体名称，如：北京大学">
+          </div>
+          <div class="form-group">
+            <label>实体类型 <span style="color:#f85149">*</span></label>
+            <select>
+              <option value="" disabled selected>选择实体类型</option>
+              <option>人物</option>
+              <option>组织机构</option>
+              <option>地理位置</option>
+              <option>技术/概念</option>
+              <option>事件</option>
+              <option>产品</option>
+              <option>其他</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>实体描述</label>
+            <textarea placeholder="输入对该实体的简要描述（可选）"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-accent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            添加实体
+          </button>
+        </div>
+      </div>
+
+      <!-- Relation Form -->
+      <div class="form-section">
+        <h3><span class="icon">🔗</span> 添加关系</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>源实体 <span style="color:#f85149">*</span></label>
+            <select>
+              <option value="" disabled selected>选择源实体</option>
+              <option>北京大学</option>
+              <option>清华大学</option>
+              <option>人工智能</option>
+              <option>张三</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>目标实体 <span style="color:#f85149">*</span></label>
+            <select>
+              <option value="" disabled selected>选择目标实体</option>
+              <option>北京大学</option>
+              <option>清华大学</option>
+              <option>人工智能</option>
+              <option>张三</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>关系类型 <span style="color:#f85149">*</span></label>
+            <select>
+              <option value="" disabled selected>选择关系类型</option>
+              <option>属于</option>
+              <option>位于</option>
+              <option>研究</option>
+              <option>创立</option>
+              <option>合作</option>
+              <option>参与</option>
+              <option>其他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>证据文本</label>
+            <input type="text" placeholder="支持该关系的原文出处">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-accent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            添加关系
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Preview (shown after analysis) -->
+    <div class="results-section" id="resultsSection">
+      <div class="results-header">
+        <h3>🔍 分析结果预览</h3>
+        <div class="stats">
+          <span>🔵 实体: <strong>12</strong> 个</span>
+          <span>🔗 关系: <strong>8</strong> 条</span>
+        </div>
+      </div>
+      <div class="results-body">
+        <!-- Extracted Entities -->
+        <div class="results-sub">
+          <h4>📌 识别到的实体</h4>
+          <div class="entity-item">
+            <input type="checkbox" checked>
+            <span class="entity-badge person">👤 张伟<span class="entity-type">人物</span></span>
+          </div>
+          <div class="entity-item">
+            <input type="checkbox" checked>
+            <span class="entity-badge org">🏛 清华大学<span class="entity-type">组织机构</span></span>
+          </div>
+          <div class="entity-item">
+            <input type="checkbox" checked>
+            <span class="entity-badge tech">💡 人工智能<span class="entity-type">技术</span></span>
+          </div>
+          <div class="entity-item">
+            <input type="checkbox" checked>
+            <span class="entity-badge location">📍 北京市<span class="entity-type">地理位置</span></span>
+          </div>
+          <div class="entity-item">
+            <input type="checkbox" checked>
+            <span class="entity-badge org">🏛 百度公司<span class="entity-type">组织机构</span></span>
+          </div>
+          <div class="entity-item">
+            <input type="checkbox">
+            <span class="entity-badge event">📅 世界人工智能大会<span class="entity-type">事件</span></span>
+          </div>
+          <div class="entity-item">
+            <input type="checkbox" checked>
+            <span class="entity-badge concept">📘 深度学习<span class="entity-type">概念</span></span>
+          </div>
+        </div>
+
+        <!-- Extracted Relations -->
+        <div class="results-sub">
+          <h4>📌 识别到的关系</h4>
+          <div class="relation-item">
+            <input type="checkbox" checked>
+            <div class="relation-arrow">
+              <span class="entity-ref">张伟</span>
+              <span class="rel-type">毕业于</span>
+              →
+              <span class="entity-ref">清华大学</span>
+            </div>
+          </div>
+          <div class="relation-item">
+            <input type="checkbox" checked>
+            <div class="relation-arrow">
+              <span class="entity-ref">张伟</span>
+              <span class="rel-type">研究</span>
+              →
+              <span class="entity-ref">人工智能</span>
+            </div>
+          </div>
+          <div class="relation-item">
+            <input type="checkbox" checked>
+            <div class="relation-arrow">
+              <span class="entity-ref">清华大学</span>
+              <span class="rel-type">位于</span>
+              →
+              <span class="entity-ref">北京市</span>
+            </div>
+          </div>
+          <div class="relation-item">
+            <input type="checkbox">
+            <div class="relation-arrow">
+              <span class="entity-ref">百度公司</span>
+              <span class="rel-type">研发</span>
+              →
+              <span class="entity-ref">深度学习</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="results-actions">
+        <button class="select-all" onclick="toggleAll()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 11 12 14 22 4"/></svg>
+          全选
+        </button>
+        <button class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          确认导入
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Processing Overlay -->
+<div class="processing-overlay" id="processingOverlay" style="display:none;">
+  <div class="processing-card">
+    <div class="spinner"></div>
+    <p>正在分析文本内容...</p>
+    <p class="detail">AI 模型正在识别实体和关系</p>
+    <div class="progress-bar"><div class="progress-fill"></div></div>
+  </div>
+</div>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Drag and drop visual
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); });
+
+  // Processing overlay demo
+  function showProcessing() {
+    const overlay = document.getElementById('processingOverlay');
+    overlay.style.display = 'flex';
+    setTimeout(() => overlay.style.display = 'none', 3000);
+  }
+
+  // Select all toggle
+  let allSelected = true;
+  function toggleAll() {
+    allSelected = !allSelected;
+    document.querySelectorAll('.results-section input[type="checkbox"]').forEach(cb => cb.checked = allSelected);
+  }
+</script>
+</body>
+</html>

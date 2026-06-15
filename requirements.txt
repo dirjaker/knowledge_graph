@@ -1,20 +1,7 @@
-# 知识图谱系统 - Python 依赖
-
-# 核心依赖
-fastapi>=0.100.0
-uvicorn>=0.20.0
+fastapi>=0.104.0
+uvicorn>=0.24.0
+httpx>=0.25.0
 pydantic>=2.0.0
-pyyaml>=6.0
-
-# 图数据库
 networkx>=3.0
-
-# NLP
-jieba>=0.42.1
-
-# 文档解析
-pymupdf>=1.23.0
-python-docx>=0.8.11
-
-# 工具
-rich>=13.0.0
+jieba>=0.42
+python-multipart>=0.0.6

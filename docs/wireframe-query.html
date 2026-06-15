@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识图谱系统 - 智能查询</title>
+<style>
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f1117;
+    --surface: #161921;
+    --surface2: #1c1f2e;
+    --surface3: #232738;
+    --border: #2a2e3f;
+    --text: #e4e6ed;
+    --text2: #8b8fa3;
+    --text3: #5c6078;
+    --blue: #3b82f6;
+    --blue-dark: #1e3a5f;
+    --blue-glow: rgba(59,130,246,0.15);
+    --green: #22c55e;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --purple: #a855f7;
+    --cyan: #06b6d4;
+    --nav-width: 64px;
+    --sidebar-width: 300px;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ===== Scrollbar ===== */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* ===== Left Navigation Rail ===== */
+  .nav-rail {
+    width: var(--nav-width);
+    min-width: var(--nav-width);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0;
+    z-index: 10;
+  }
+  .nav-logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: #fff;
+    margin-bottom: 24px;
+  }
+  .nav-item {
+    width: 48px; height: 48px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    color: var(--text3);
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text2); }
+  .nav-item.active {
+    background: var(--blue-glow);
+    color: var(--blue);
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%; transform: translateY(-50%);
+    width: 3px; height: 20px;
+    background: var(--blue);
+    border-radius: 0 2px 2px 0;
+  }
+  .nav-item svg { width: 22px; height: 22px; }
+  .nav-item .tooltip {
+    position: absolute; left: 58px; top: 50%; transform: translateY(-50%);
+    background: var(--surface3); color: var(--text);
+    padding: 6px 12px; border-radius: 6px;
+    font-size: 12px; white-space: nowrap;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.2s;
+    border: 1px solid var(--border);
+  }
+  .nav-item:hover .tooltip { opacity: 1; }
+  .nav-spacer { flex: 1; }
+  .nav-bottom { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+  /* ===== Main Content ===== */
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    position: relative;
+  }
+
+  /* ===== Top Header ===== */
+  .page-header {
+    height: 56px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .page-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .page-header h1 .icon {
+    width: 28px; height: 28px;
+    background: var(--blue-glow);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--blue);
+  }
+  .header-actions { display: flex; gap: 8px; }
+  .header-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .header-btn:hover { border-color: var(--text3); color: var(--text); }
+
+  /* ===== Content Body: Chat + Sidebar ===== */
+  .content-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ===== Chat Area ===== */
+  .chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Messages Container */
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Message Row */
+  .message-row {
+    display: flex;
+    gap: 12px;
+    max-width: 85%;
+  }
+  .message-row.user { align-self: flex-end; flex-direction: row-reverse; }
+  .message-row.ai { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+  }
+  .message-row.user .msg-avatar {
+    background: linear-gradient(135deg, var(--blue), #6366f1);
+    color: #fff;
+  }
+  .message-row.ai .msg-avatar {
+    background: linear-gradient(135deg, var(--green), var(--cyan));
+    color: #fff;
+  }
+
+  .msg-content { display: flex; flex-direction: column; gap: 6px; }
+  .msg-meta {
+    font-size: 11px;
+    color: var(--text3);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .message-row.user .msg-meta { text-align: right; justify-content: flex-end; }
+
+  .msg-bubble {
+    padding: 14px 18px;
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: break-word;
+  }
+  .message-row.user .msg-bubble {
+    background: var(--blue);
+    color: #fff;
+    border-radius: 16px 16px 4px 16px;
+  }
+  .message-row.ai .msg-bubble {
+    background: var(--surface2);
+    color: var(--text);
+    border-radius: 16px 16px 16px 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* AI Message with embedded graph result */
+  .msg-bubble .graph-result-card {
+    margin-top: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .graph-result-card .grc-header {
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .graph-result-card .grc-header .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+  }
+  .graph-canvas-wrap {
+    height: 220px;
+    position: relative;
+    overflow: hidden;
+  }
+  .graph-canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+  .graph-legend {
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 16px;
+  }
+  .graph-legend span { display: flex; align-items: center; gap: 4px; }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+
+  .path-info {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+  }
+  .path-info .path-title {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .path-steps {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  }
+  .path-step {
+    padding: 3px 10px;
+    background: var(--surface3);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .path-step.highlight {
+    background: var(--blue-glow);
+    color: var(--blue);
+    border: 1px solid rgba(59,130,246,0.3);
+  }
+  .path-arrow { color: var(--text3); font-size: 12px; }
+
+  /* Typing indicator */
+  .typing-indicator { display: flex; gap: 4px; padding: 8px 0; }
+  .typing-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text3);
+    animation: typingPulse 1.4s infinite ease-in-out;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingPulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  /* ===== Input Area ===== */
+  .input-area {
+    padding: 12px 24px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  /* Suggested Chips */
+  .suggested-chips {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .chip:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: var(--blue-glow);
+  }
+  .chip svg { width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; }
+
+  .input-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 6px 6px 18px;
+    transition: border-color 0.2s;
+  }
+  .input-bar:focus-within { border-color: var(--blue); }
+  .input-bar input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 0;
+  }
+  .input-bar input::placeholder { color: var(--text3); }
+  .input-bar .attach-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text3);
+    background: none; border: none;
+    transition: color 0.15s;
+  }
+  .input-bar .attach-btn:hover { color: var(--text2); }
+  .send-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--blue);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: #2563eb; }
+  .send-btn svg { width: 18px; height: 18px; }
+
+  /* ===== Right Sidebar ===== */
+  .sidebar {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-section:last-child { border-bottom: none; }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-title .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--surface3);
+    color: var(--text2);
+    font-weight: 500;
+  }
+
+  /* Query History */
+  .history-item {
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 4px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .history-item:hover { background: var(--surface2); }
+  .history-item.active { background: var(--blue-glow); border: 1px solid rgba(59,130,246,0.2); }
+  .history-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--surface3);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--text3);
+  }
+  .history-icon svg { width: 14px; height: 14px; }
+  .history-text {
+    flex: 1; min-width: 0;
+  }
+  .history-text .hq {
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-text .ht {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+
+  /* Structured Query Form */
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+  .form-input, .form-select {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--blue); }
+  .form-input::placeholder { color: var(--text3); }
+  .form-select { cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235c6078' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .form-select option { background: var(--surface2); color: var(--text); }
+
+  /* Slider */
+  .slider-wrap {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .slider-wrap input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  .slider-wrap input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--blue);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 2px var(--blue);
+  }
+  .slider-value {
+    min-width: 28px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--blue);
+  }
+
+  .query-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background 0.15s;
+    margin-top: 4px;
+  }
+  .query-btn:hover { background: #2563eb; }
+
+  /* ===== Animations ===== */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .message-row { animation: fadeInUp 0.3s ease; }
+</style>
+</head>
+<body>
+
+<!-- ===== Left Navigation Rail ===== -->
+<nav class="nav-rail">
+  <div class="nav-logo">KG</div>
+
+  <div class="nav-item" title="概览">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span class="tooltip">数据概览</span>
+  </div>
+  <div class="nav-item" title="知识图谱">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/><line x1="5" y1="19" x2="19" y2="19"/></svg>
+    <span class="tooltip">知识图谱</span>
+  </div>
+  <div class="nav-item active" title="智能查询">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+    <span class="tooltip">智能查询</span>
+  </div>
+  <div class="nav-item" title="数据管理">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+    <span class="tooltip">数据管理</span>
+  </div>
+  <div class="nav-item" title="关系发现">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+    <span class="tooltip">关系发现</span>
+  </div>
+  <div class="nav-item" title="分析报告">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    <span class="tooltip">分析报告</span>
+  </div>
+
+  <div class="nav-spacer"></div>
+
+  <div class="nav-bottom">
+    <div class="nav-item" title="系统设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="tooltip">系统设置</span>
+    </div>
+    <div class="nav-item" title="用户">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="tooltip">用户中心</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== Main Content ===== -->
+<div class="main-area">
+  <!-- Page Header -->
+  <header class="page-header">
+    <h1>
+      <span class="icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+      </span>
+      智能查询
+    </h1>
+    <div class="header-actions">
+      <button class="header-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        新建对话
+      </button>
+      <button class="header-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        导出记录
+      </button>
+    </div>
+  </header>
+
+  <!-- Content Body: Chat + Sidebar -->
+  <div class="content-body">
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+
+      <!-- Messages -->
+      <div class="messages-container" id="messagesContainer">
+
+        <!-- User Message 1 -->
+        <div class="message-row user">
+          <div class="msg-avatar">我</div>
+          <div class="msg-content">
+            <div class="msg-meta"><span>今天 09:15</span></div>
+            <div class="msg-bubble">张三和李四之间有什么关系？</div>
+          </div>
+        </div>
+
+        <!-- AI Response 1 -->
+        <div class="message-row ai">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-content">
+            <div class="msg-meta"><span>AI 助手 · 今天 09:15</span></div>
+            <div class="msg-bubble">
+              <div>通过分析知识图谱，<strong>张三</strong>和<strong>李四</strong>之间存在以下关系：</div>
+              <div style="margin-top:8px;">🔍 找到 <strong style="color:var(--blue)">3</strong> 条关系路径，最短路径长度为 <strong style="color:var(--blue)">2</strong> 跳。</div>
+
+              <!-- Mini Graph Visualization -->
+              <div class="graph-result-card">
+                <div class="grc-header"><span class="dot"></span> 关系图谱可视化</div>
+                <div class="graph-canvas-wrap">
+                  <canvas id="graphCanvas1"></canvas>
+                </div>
+                <div class="graph-legend">
+                  <span><span class="legend-dot" style="background:var(--blue)"></span> 查询实体</span>
+                  <span><span class="legend-dot" style="background:var(--green)"></span> 中间节点</span>
+                  <span><span class="legend-dot" style="background:var(--orange)"></span> 关系类型</span>
+                  <span><span class="legend-dot" style="background:var(--purple)"></span> 高亮路径</span>
+                </div>
+              </div>
+
+              <!-- Path Info -->
+              <div class="path-info">
+                <div class="path-title">📌 主要关系路径：</div>
+                <div class="path-steps">
+                  <span class="path-step highlight">张三</span>
+                  <span class="path-arrow">—[同事]→</span>
+                  <span class="path-step">王五</span>
+                  <span class="path-arrow">—[上下级]→</span>
+                  <span class="path-step highlight">李四</span>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text2);">
+                  张三是A公司技术部经理，李四是A公司技术部高级工程师，王五是技术部总监，负责管理两人的日常工作。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Message 2 -->
+        <div class="message-row user">
+          <div class="msg-avatar">我</div>
+          <div class="msg-content">
+            <div class="msg-meta"><span>今天 09:17</span></div>
+            <div class="msg-bubble">A公司还有哪些关键人物？</div>
+          </div>
+        </div>
+
+        <!-- AI Response 2 -->
+        <div class="message-row ai">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-content">
+            <div class="msg-meta"><span>AI 助手 · 今天 09:17</span></div>
+            <div class="msg-bubble">
+              <div>A公司的关键人物包括：</div>
+              <div style="margin-top:10px;">
+                <table style="width:100%;font-size:13px;border-collapse:collapse;">
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:6px 0;color:var(--text2);">姓名</td>
+                    <td style="padding:6px 0;color:var(--text2);">职位</td>
+                    <td style="padding:6px 0;color:var(--text2);">重要度</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:8px 0;"><span style="color:var(--blue);">赵六</span></td>
+                    <td style="padding:8px 0;">CEO</td>
+                    <td style="padding:8px 0;"><span style="color:var(--red);">●●●●●</span> 极高</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:8px 0;"><span style="color:var(--blue);">王五</span></td>
+                    <td style="padding:8px 0;">技术总监</td>
+                    <td style="padding:8px 0;"><span style="color:var(--orange);">●●●●</span>○</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0;"><span style="color:var(--blue);">陈七</span></td>
+                    <td style="padding:8px 0;">CFO</td>
+                    <td style="padding:8px 0;"><span style="color:var(--orange);">●●●</span>○○</td>
+                  </tr>
+                </table>
+              </div>
+              <div style="margin-top:10px;font-size:13px;color:var(--text2);">
+                共找到 <strong style="color:var(--text)">12</strong> 位与A公司相关的人物，以上为关联度最高的前3位。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Message 3 -->
+        <div class="message-row user">
+          <div class="msg-avatar">我</div>
+          <div class="msg-content">
+            <div class="msg-meta"><span>今天 09:18</span></div>
+            <div class="msg-bubble">赵六和张三之间的关系链是什么？</div>
+          </div>
+        </div>
+
+        <!-- AI Response 3 with graph -->
+        <div class="message-row ai">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-content">
+            <div class="msg-meta"><span>AI 助手 · 今天 09:18</span></div>
+            <div class="msg-bubble">
+              <div><strong>赵六</strong>（CEO）与<strong>张三</strong>（技术部经理）的关系链如下：</div>
+
+              <div class="graph-result-card">
+                <div class="grc-header"><span class="dot"></span> 关系路径可视化</div>
+                <div class="graph-canvas-wrap">
+                  <canvas id="graphCanvas2"></canvas>
+                </div>
+                <div class="graph-legend">
+                  <span><span class="legend-dot" style="background:var(--blue)"></span> 查询实体</span>
+                  <span><span class="legend-dot" style="background:var(--green)"></span> 中间节点</span>
+                  <span><span class="legend-dot" style="background:var(--purple)"></span> 高亮路径</span>
+                </div>
+              </div>
+
+              <div class="path-info">
+                <div class="path-title">📌 最短路径（2跳）：</div>
+                <div class="path-steps">
+                  <span class="path-step highlight">赵六</span>
+                  <span class="path-arrow">—[管理]→</span>
+                  <span class="path-step">王五</span>
+                  <span class="path-arrow">—[管理]→</span>
+                  <span class="path-step highlight">张三</span>
+                </div>
+              </div>
+              <div class="path-info" style="margin-top:8px;">
+                <div class="path-title">📌 备选路径（3跳）：</div>
+                <div class="path-steps">
+                  <span class="path-step highlight">赵六</span>
+                  <span class="path-arrow">—[投资]→</span>
+                  <span class="path-step">A公司</span>
+                  <span class="path-arrow">—[雇佣]→</span>
+                  <span class="path-step">技术部</span>
+                  <span class="path-arrow">—[隶属]→</span>
+                  <span class="path-step highlight">张三</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Typing Indicator -->
+        <div class="message-row ai" id="typingIndicator" style="display:none;">
+          <div class="msg-avatar">AI</div>
+          <div class="msg-content">
+            <div class="msg-bubble">
+              <div class="typing-indicator">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <!-- Suggested Questions -->
+        <div class="suggested-chips">
+          <div class="chip" onclick="insertQuestion(this)">🔍 谁是知识图谱中最核心的节点？</div>
+          <div class="chip" onclick="insertQuestion(this)">🔗 查找所有涉及资金流转的关系</div>
+          <div class="chip" onclick="insertQuestion(this)">📊 分析A公司的组织架构</div>
+          <div class="chip" onclick="insertQuestion(this)">⚠️ 发现潜在的利益冲突关系</div>
+          <div class="chip" onclick="insertQuestion(this)">🗺️ 张三的社会关系网络</div>
+        </div>
+        <!-- Input Bar -->
+        <div class="input-bar">
+          <input type="text" id="queryInput" placeholder="输入问题，例如：张三和李四什么关系？" />
+          <button class="attach-btn" title="附件">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <button class="send-btn" onclick="sendMessage()" title="发送">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <aside class="sidebar">
+
+      <!-- Query History -->
+      <div class="sidebar-section">
+        <div class="section-title">
+          查询历史
+          <span class="badge">8 条</span>
+        </div>
+        <div class="history-item active">
+          <div class="history-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          </div>
+          <div class="history-text">
+            <div class="hq">赵六和张三之间的关系链是什么？</div>
+            <div class="ht">3分钟前 · 找到2条路径</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          </div>
+          <div class="history-text">
+            <div class="hq">A公司还有哪些关键人物？</div>
+            <div class="ht">5分钟前 · 找到12条结果</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          </div>
+          <div class="history-text">
+            <div class="hq">张三和李四之间有什么关系？</div>
+            <div class="ht">7分钟前 · 找到3条路径</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          </div>
+          <div class="history-text">
+            <div class="hq">查询所有子公司信息</div>
+            <div class="ht">昨天 16:30 · 找到8条结果</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          </div>
+          <div class="history-text">
+            <div class="hq">资金流向分析：大额转账路径</div>
+            <div class="ht">昨天 14:12 · 找到5条路径</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Structured Query -->
+      <div class="sidebar-section">
+        <div class="section-title">结构化查询</div>
+
+        <div class="form-group">
+          <label class="form-label">起始实体</label>
+          <input class="form-input" type="text" placeholder="输入实体名称，如：张三" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">目标实体（可选）</label>
+          <input class="form-input" type="text" placeholder="输入目标实体名称" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">查询类型</label>
+          <select class="form-select">
+            <option>关系查询</option>
+            <option>路径查询</option>
+            <option>邻居查询</option>
+            <option>属性查询</option>
+            <option>子图查询</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">关系类型</label>
+          <select class="form-select">
+            <option>全部关系</option>
+            <option>亲属关系</option>
+            <option>同事关系</option>
+            <option>投资关系</option>
+            <option>雇佣关系</option>
+            <option>交易关系</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">最大跳数</label>
+          <div class="slider-wrap">
+            <input type="range" min="1" max="6" value="3" id="hopSlider" oninput="document.getElementById('hopValue').textContent=this.value" />
+            <span class="slider-value" id="hopValue">3</span>
+          </div>
+        </div>
+
+        <button class="query-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          执行查询
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+// ===== Graph Visualization (Simplified Canvas) =====
+function drawGraph(canvasId, config) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  // Colors
+  const colors = {
+    query: '#3b82f6',
+    intermediate: '#22c55e',
+    highlight: '#a855f7',
+    edge: '#2a2e3f',
+    highlightEdge: '#a855f7',
+    text: '#e4e6ed',
+    textDim: '#5c6078',
+    orange: '#f59e0b',
+  };
+
+  // Draw edges
+  config.edges.forEach(e => {
+    const from = config.nodes[e.from];
+    const to = config.nodes[e.to];
+    ctx.beginPath();
+    ctx.moveTo(from.x * W, from.y * H);
+    ctx.lineTo(to.x * W, to.y * H);
+    ctx.strokeStyle = e.highlight ? colors.highlightEdge : colors.edge;
+    ctx.lineWidth = e.highlight ? 2.5 : 1.2;
+    if (e.highlight) {
+      ctx.setLineDash([]);
+      ctx.shadowColor = colors.highlightEdge;
+      ctx.shadowBlur = 6;
+    } else {
+      ctx.setLineDash([4, 4]);
+      ctx.shadowBlur = 0;
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+
+    // Edge label
+    if (e.label) {
+      const mx = ((from.x + to.x) / 2) * W;
+      const my = ((from.y + to.y) / 2) * H - 8;
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = e.highlight ? colors.orange : colors.textDim;
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, mx, my);
+    }
+  });
+
+  // Draw nodes
+  config.nodes.forEach((n, i) => {
+    const nx = n.x * W, ny = n.y * H;
+    const r = n.type === 'query' ? 22 : (n.type === 'highlight' ? 20 : 16);
+
+    // Glow for query/highlight nodes
+    if (n.type === 'query' || n.type === 'highlight') {
+      const gradient = ctx.createRadialGradient(nx, ny, r, nx, ny, r * 2.2);
+      const c = n.type === 'query' ? colors.query : colors.highlight;
+      gradient.addColorStop(0, c + '40');
+      gradient.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.arc(nx, ny, r * 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(nx, ny, r, 0, Math.PI * 2);
+    let fillColor;
+    switch(n.type) {
+      case 'query': fillColor = colors.query; break;
+      case 'highlight': fillColor = colors.highlight; break;
+      case 'intermediate': fillColor = colors.intermediate; break;
+      default: fillColor = colors.textDim;
+    }
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+
+    // Border
+    ctx.beginPath();
+    ctx.arc(nx, ny, r, 0, Math.PI * 2);
+    ctx.strokeStyle = n.type === 'query' ? '#fff' : (n.type === 'highlight' ? '#fff' : 'transparent');
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.label.substring(0, 2), nx, ny);
+
+    // Full name below
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = n.type === 'query' ? colors.query : (n.type === 'highlight' ? colors.highlight : colors.text);
+    ctx.textBaseline = 'top';
+    ctx.fillText(n.label, nx, ny + r + 6);
+  });
+}
+
+// Graph 1: 张三 — 王五 — 李四
+const graph1Config = {
+  nodes: [
+    { label: '张三', x: 0.18, y: 0.42, type: 'query' },
+    { label: '王五', x: 0.5, y: 0.28, type: 'intermediate' },
+    { label: '李四', x: 0.82, y: 0.42, type: 'query' },
+    { label: 'A公司', x: 0.5, y: 0.72, type: 'default' },
+    { label: '赵六', x: 0.22, y: 0.78, type: 'default' },
+    { label: '陈七', x: 0.78, y: 0.78, type: 'default' },
+  ],
+  edges: [
+    { from: 0, to: 1, label: '同事', highlight: true },
+    { from: 1, to: 2, label: '上下级', highlight: true },
+    { from: 0, to: 3, label: '雇佣', highlight: false },
+    { from: 2, to: 3, label: '雇佣', highlight: false },
+    { from: 1, to: 3, label: '管理', highlight: false },
+    { from: 4, to: 3, label: 'CEO', highlight: false },
+    { from: 5, to: 3, label: 'CFO', highlight: false },
+  ]
+};
+
+// Graph 2: 赵六 — 王五 — 张三
+const graph2Config = {
+  nodes: [
+    { label: '赵六', x: 0.15, y: 0.35, type: 'query' },
+    { label: '王五', x: 0.5, y: 0.3, type: 'intermediate' },
+    { label: '张三', x: 0.85, y: 0.35, type: 'highlight' },
+    { label: 'A公司', x: 0.5, y: 0.75, type: 'default' },
+    { label: '技术部', x: 0.82, y: 0.75, type: 'default' },
+  ],
+  edges: [
+    { from: 0, to: 1, label: '管理', highlight: true },
+    { from: 1, to: 2, label: '管理', highlight: true },
+    { from: 0, to: 3, label: 'CEO', highlight: false },
+    { from: 3, to: 4, label: '部门', highlight: false },
+    { from: 2, to: 4, label: '隶属', highlight: false },
+  ]
+};
+
+// Draw graphs
+window.addEventListener('load', () => {
+  drawGraph('graphCanvas1', graph1Config);
+  drawGraph('graphCanvas2', graph2Config);
+});
+window.addEventListener('resize', () => {
+  drawGraph('graphCanvas1', graph1Config);
+  drawGraph('graphCanvas2', graph2Config);
+});
+
+// ===== Interaction =====
+function insertQuestion(chip) {
+  document.getElementById('queryInput').value = chip.textContent.replace(/^[^\s]+\s/, '');
+  document.getElementById('queryInput').focus();
+}
+
+function sendMessage() {
+  const input = document.getElementById('queryInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const container = document.getElementById('messagesContainer');
+  const typing = document.getElementById('typingIndicator');
+
+  // Add user message
+  const userRow = document.createElement('div');
+  userRow.className = 'message-row user';
+  userRow.innerHTML = `
+    <div class="msg-avatar">我</div>
+    <div class="msg-content">
+      <div class="msg-meta"><span>刚刚</span></div>
+      <div class="msg-bubble">${text.replace(/</g,'&lt;')}</div>
+    </div>
+  `;
+  container.insertBefore(userRow, typing);
+  input.value = '';
+
+  // Show typing
+  typing.style.display = 'flex';
+  container.scrollTop = container.scrollHeight;
+
+  // Simulate AI response
+  setTimeout(() => {
+    typing.style.display = 'none';
+    const aiRow = document.createElement('div');
+    aiRow.className = 'message-row ai';
+    aiRow.innerHTML = `
+      <div class="msg-avatar">AI</div>
+      <div class="msg-content">
+        <div class="msg-meta"><span>AI 助手 · 刚刚</span></div>
+        <div class="msg-bubble">正在分析知识图谱中与「${text.replace(/</g,'&lt;')}」相关的数据，请稍候……<br><br><span style="color:var(--text3);font-size:12px;">💡 提示：您可以在右侧使用结构化查询进行精确检索</span></div>
+      </div>
+    `;
+    container.insertBefore(aiRow, typing);
+    container.scrollTop = container.scrollHeight;
+  }, 1800);
+
+  container.scrollTop = container.scrollHeight;
+}
+
+// Enter key to send
+document.getElementById('queryInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+</script>
+</body>
+</html>

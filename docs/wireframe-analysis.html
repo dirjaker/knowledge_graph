@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识图谱系统 - 分析</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f1117; color: #e0e0e0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Left Nav Rail */
+  .nav-rail { width: 64px; background: #161820; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 8px; border-right: 1px solid #1e2130; flex-shrink: 0; }
+  .nav-rail .logo { width: 36px; height: 36px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #fff; margin-bottom: 16px; }
+  .nav-item { width: 48px; height: 48px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; font-size: 10px; gap: 2px; transition: all 0.2s; text-decoration: none; }
+  .nav-item:hover { background: #1e2130; color: #a5b4fc; }
+  .nav-item.active { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .nav-item svg { width: 20px; height: 20px; }
+  .nav-spacer { flex: 1; }
+
+  /* Main Content */
+  .main { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  .main::-webkit-scrollbar { width: 6px; }
+  .main::-webkit-scrollbar-thumb { background: #2a2d3a; border-radius: 3px; }
+
+  .page-header { display: flex; align-items: center; justify-content: space-between; }
+  .page-header h1 { font-size: 22px; font-weight: 600; }
+  .page-header .actions { display: flex; gap: 10px; }
+  .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #2a2d3a; background: #1a1d28; color: #c4c8d4; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-primary { background: #6366f1; border-color: #6366f1; color: #fff; }
+
+  /* Metric Cards */
+  .metrics-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .metric-card { background: #161820; border: 1px solid #1e2130; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .metric-card .top-row { display: flex; align-items: center; justify-content: space-between; }
+  .metric-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .metric-icon svg { width: 18px; height: 18px; }
+  .metric-icon.purple { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .metric-icon.blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .metric-icon.green { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .metric-icon.orange { background: rgba(251,146,60,0.15); color: #fb923c; }
+  .metric-icon.pink { background: rgba(236,72,153,0.15); color: #f472b6; }
+  .metric-trend { font-size: 12px; display: flex; align-items: center; gap: 3px; }
+  .metric-trend.up { color: #4ade80; }
+  .metric-trend.down { color: #f87171; }
+  .metric-trend.flat { color: #6b7280; }
+  .metric-label { font-size: 13px; color: #6b7280; }
+  .metric-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; }
+
+  /* Chart Panels */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .panel { background: #161820; border: 1px solid #1e2130; border-radius: 12px; padding: 20px; }
+  .panel-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .panel-title .dot { width: 8px; height: 8px; border-radius: 50%; background: #6366f1; }
+
+  /* Bottom Row */
+  .bottom-row { display: grid; grid-template-columns: 2fr 3fr; gap: 16px; }
+
+  /* Community */
+  .community { margin-bottom: 14px; }
+  .community-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .color-tag { width: 10px; height: 10px; border-radius: 3px; }
+  .community-name { font-size: 13px; font-weight: 600; }
+  .community-count { font-size: 11px; color: #6b7280; margin-left: auto; }
+  .community-nodes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .node-chip { background: #1e2130; border: 1px solid #2a2d3a; border-radius: 6px; padding: 3px 10px; font-size: 12px; color: #a5b4fc; }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th { text-align: left; padding: 10px 12px; color: #6b7280; font-weight: 500; border-bottom: 1px solid #1e2130; cursor: pointer; user-select: none; white-space: nowrap; }
+  .data-table th:hover { color: #a5b4fc; }
+  .data-table th .sort-icon { font-size: 10px; margin-left: 4px; opacity: 0.5; }
+  .data-table th.sorted .sort-icon { opacity: 1; color: #818cf8; }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid #1a1d28; }
+  .data-table tr:hover td { background: rgba(99,102,241,0.05); }
+  .rank-badge { width: 22px; height: 22px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+  .rank-badge.gold { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .rank-badge.silver { background: rgba(156,163,175,0.15); color: #9ca3af; }
+  .rank-badge.bronze { background: rgba(180,83,9,0.15); color: #d97706; }
+  .rank-badge.normal { color: #6b7280; }
+
+  /* SVG chart styles */
+  .donut-segment { transition: opacity 0.2s; }
+  .donut-segment:hover { opacity: 0.8; }
+  .bar-rect { transition: opacity 0.2s; }
+  .bar-rect:hover { opacity: 0.8; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9ca3af; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Left Navigation Rail -->
+<nav class="nav-rail">
+  <div class="logo">KG</div>
+  <a class="nav-item" href="#" title="仪表盘">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <span>仪表盘</span>
+  </a>
+  <a class="nav-item" href="#" title="知识图谱">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="5" y2="16"/><line x1="12" y1="8" x2="19" y2="16"/><line x1="5" y1="22" x2="19" y2="22"/></svg>
+    <span>知识图谱</span>
+  </a>
+  <a class="nav-item" href="#" title="文档管理">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+    <span>文档管理</span>
+  </a>
+  <a class="nav-item active" href="#" title="分析">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>分析</span>
+  </a>
+  <a class="nav-item" href="#" title="设置">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <span>设置</span>
+  </a>
+  <div class="nav-spacer"></div>
+  <a class="nav-item" href="#" title="帮助">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span>帮助</span>
+  </a>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>📊 图谱分析</h1>
+    <div class="actions">
+      <button class="btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        导出报告
+      </button>
+      <button class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23,4 23,10 17,10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        重新分析
+      </button>
+    </div>
+  </div>
+
+  <!-- Metric Cards Row -->
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="top-row">
+        <div class="metric-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div class="metric-trend up">↑ 12%</div>
+      </div>
+      <div class="metric-label">实体总数</div>
+      <div class="metric-value">128</div>
+    </div>
+    <div class="metric-card">
+      <div class="top-row">
+        <div class="metric-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <div class="metric-trend up">↑ 8%</div>
+      </div>
+      <div class="metric-label">关系总数</div>
+      <div class="metric-value">256</div>
+    </div>
+    <div class="metric-card">
+      <div class="top-row">
+        <div class="metric-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        </div>
+        <div class="metric-trend flat">— 0%</div>
+      </div>
+      <div class="metric-label">文档数</div>
+      <div class="metric-value">15</div>
+    </div>
+    <div class="metric-card">
+      <div class="top-row">
+        <div class="metric-icon orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+        </div>
+        <div class="metric-trend up">↑ 0.5</div>
+      </div>
+      <div class="metric-label">平均度数</div>
+      <div class="metric-value">4.0</div>
+    </div>
+    <div class="metric-card">
+      <div class="top-row">
+        <div class="metric-icon pink">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 21V9a9 9 0 009 9"/></svg>
+        </div>
+        <div class="metric-trend down">↓ 1</div>
+      </div>
+      <div class="metric-label">连通分量</div>
+      <div class="metric-value">3</div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <!-- Donut Chart: Entity Type Distribution -->
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>实体类型分布</div>
+      <svg viewBox="0 0 200 200" width="100%" style="max-height:220px">
+        <!-- Donut segments -->
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#6366f1" stroke-width="28" stroke-dasharray="132 308" stroke-dashoffset="0" class="donut-segment"/>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#3b82f6" stroke-width="28" stroke-dasharray="105 355" stroke-dashoffset="-132" class="donut-segment"/>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#22c55e" stroke-width="28" stroke-dasharray="88 372" stroke-dashoffset="-237" class="donut-segment"/>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#fb923c" stroke-width="28" stroke-dasharray="66 394" stroke-dashoffset="-325" class="donut-segment"/>
+        <circle cx="100" cy="100" r="70" fill="none" stroke="#f472b6" stroke-width="28" stroke-dasharray="44 416" stroke-dashoffset="-391" class="donut-segment"/>
+        <!-- Center text -->
+        <text x="100" y="94" text-anchor="middle" fill="#e0e0e0" font-size="22" font-weight="700">128</text>
+        <text x="100" y="114" text-anchor="middle" fill="#6b7280" font-size="11">实体总数</text>
+      </svg>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#6366f1"></span>人物 (30%)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span>组织 (24%)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>地点 (20%)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#fb923c"></span>事件 (15%)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#f472b6"></span>概念 (11%)</div>
+      </div>
+    </div>
+
+    <!-- Bar Chart: Relation Type Distribution -->
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>关系类型分布</div>
+      <svg viewBox="0 0 300 200" width="100%" style="max-height:240px">
+        <!-- Bars -->
+        <rect x="80" y="12" width="180" height="22" rx="4" fill="#6366f1" class="bar-rect" opacity="0.85"/>
+        <text x="76" y="27" text-anchor="end" fill="#9ca3af" font-size="11">属于</text>
+        <text x="266" y="27" fill="#c4c8d4" font-size="11">72</text>
+
+        <rect x="80" y="44" width="140" height="22" rx="4" fill="#3b82f6" class="bar-rect" opacity="0.85"/>
+        <text x="76" y="59" text-anchor="end" fill="#9ca3af" font-size="11">位于</text>
+        <text x="226" y="59" fill="#c4c8d4" font-size="11">56</text>
+
+        <rect x="80" y="76" width="110" height="22" rx="4" fill="#22c55e" class="bar-rect" opacity="0.85"/>
+        <text x="76" y="91" text-anchor="end" fill="#9ca3af" font-size="11">参与</text>
+        <text x="196" y="91" fill="#c4c8d4" font-size="11">44</text>
+
+        <rect x="80" y="108" width="85" height="22" rx="4" fill="#fb923c" class="bar-rect" opacity="0.85"/>
+        <text x="76" y="123" text-anchor="end" fill="#9ca3af" font-size="11">创建</text>
+        <text x="171" y="123" fill="#c4c8d4" font-size="11">34</text>
+
+        <rect x="80" y="140" width="65" height="22" rx="4" fill="#f472b6" class="bar-rect" opacity="0.85"/>
+        <text x="76" y="155" text-anchor="end" fill="#9ca3af" font-size="11">包含</text>
+        <text x="151" y="155" fill="#c4c8d4" font-size="11">26</text>
+
+        <rect x="80" y="172" width="50" height="22" rx="4" fill="#a78bfa" class="bar-rect" opacity="0.85"/>
+        <text x="76" y="187" text-anchor="end" fill="#9ca3af" font-size="11">相关</text>
+        <text x="136" y="187" fill="#c4c8d4" font-size="11">24</text>
+      </svg>
+    </div>
+
+    <!-- Bar Chart: Top 10 Connected Nodes -->
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>连接数 Top 10 节点</div>
+      <svg viewBox="0 0 300 240" width="100%" style="max-height:240px">
+        <rect x="80" y="4" width="200" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.9"/>
+        <text x="76" y="17" text-anchor="end" fill="#9ca3af" font-size="10">人工智能</text>
+        <text x="284" y="17" fill="#e0e0e0" font-size="10" font-weight="600">24</text>
+
+        <rect x="80" y="28" width="175" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.8"/>
+        <text x="76" y="41" text-anchor="end" fill="#9ca3af" font-size="10">深度学习</text>
+        <text x="259" y="41" fill="#e0e0e0" font-size="10" font-weight="600">21</text>
+
+        <rect x="80" y="52" width="150" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.7"/>
+        <text x="76" y="65" text-anchor="end" fill="#9ca3af" font-size="10">清华大学</text>
+        <text x="234" y="65" fill="#e0e0e0" font-size="10" font-weight="600">18</text>
+
+        <rect x="80" y="76" width="133" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.65"/>
+        <text x="76" y="89" text-anchor="end" fill="#9ca3af" font-size="10">北京</text>
+        <text x="217" y="89" fill="#e0e0e0" font-size="10" font-weight="600">16</text>
+
+        <rect x="80" y="100" width="117" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.6"/>
+        <text x="76" y="113" text-anchor="end" fill="#9ca3af" font-size="10">机器学习</text>
+        <text x="201" y="113" fill="#e0e0e0" font-size="10" font-weight="600">14</text>
+
+        <rect x="80" y="124" width="100" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.55"/>
+        <text x="76" y="137" text-anchor="end" fill="#9ca3af" font-size="10">谷歌</text>
+        <text x="184" y="137" fill="#e0e0e0" font-size="10" font-weight="600">12</text>
+
+        <rect x="80" y="148" width="92" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.5"/>
+        <text x="76" y="161" text-anchor="end" fill="#9ca3af" font-size="10">自然语言处理</text>
+        <text x="176" y="161" fill="#e0e0e0" font-size="10" font-weight="600">11</text>
+
+        <rect x="80" y="172" width="83" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.45"/>
+        <text x="76" y="185" text-anchor="end" fill="#9ca3af" font-size="10">计算机视觉</text>
+        <text x="167" y="185" fill="#e0e0e0" font-size="10" font-weight="600">10</text>
+
+        <rect x="80" y="196" width="75" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.4"/>
+        <text x="76" y="209" text-anchor="end" fill="#9ca3af" font-size="10">神经网络</text>
+        <text x="159" y="209" fill="#e0e0e0" font-size="10" font-weight="600">9</text>
+
+        <rect x="80" y="220" width="67" height="19" rx="3" fill="#6366f1" class="bar-rect" opacity="0.35"/>
+        <text x="76" y="233" text-anchor="end" fill="#9ca3af" font-size="10">数据科学</text>
+        <text x="151" y="233" fill="#e0e0e0" font-size="10" font-weight="600">8</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Bottom Row -->
+  <div class="bottom-row">
+    <!-- Community Detection -->
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>社区检测结果</div>
+
+      <div class="community">
+        <div class="community-header">
+          <span class="color-tag" style="background:#6366f1"></span>
+          <span class="community-name">社区 1 — AI 核心技术</span>
+          <span class="community-count">42 个节点</span>
+        </div>
+        <div class="community-nodes">
+          <span class="node-chip">人工智能</span>
+          <span class="node-chip">深度学习</span>
+          <span class="node-chip">机器学习</span>
+          <span class="node-chip">神经网络</span>
+          <span class="node-chip">自然语言处理</span>
+          <span class="node-chip">计算机视觉</span>
+          <span class="node-chip" style="color:#6b7280">+36 更多</span>
+        </div>
+      </div>
+
+      <div class="community">
+        <div class="community-header">
+          <span class="color-tag" style="background:#22c55e"></span>
+          <span class="community-name">社区 2 — 研究机构</span>
+          <span class="community-count">35 个节点</span>
+        </div>
+        <div class="community-nodes">
+          <span class="node-chip">清华大学</span>
+          <span class="node-chip">北京大学</span>
+          <span class="node-chip">中科院</span>
+          <span class="node-chip">上海交大</span>
+          <span class="node-chip">浙江大学</span>
+          <span class="node-chip" style="color:#6b7280">+30 更多</span>
+        </div>
+      </div>
+
+      <div class="community">
+        <div class="community-header">
+          <span class="color-tag" style="background:#fb923c"></span>
+          <span class="community-name">社区 3 — 科技企业</span>
+          <span class="community-count">31 个节点</span>
+        </div>
+        <div class="community-nodes">
+          <span class="node-chip">谷歌</span>
+          <span class="node-chip">百度</span>
+          <span class="node-chip">华为</span>
+          <span class="node-chip">阿里巴巴</span>
+          <span class="node-chip">腾讯</span>
+          <span class="node-chip" style="color:#6b7280">+26 更多</span>
+        </div>
+      </div>
+
+      <div class="community">
+        <div class="community-header">
+          <span class="color-tag" style="background:#f472b6"></span>
+          <span class="community-name">社区 4 — 应用领域</span>
+          <span class="community-count">20 个节点</span>
+        </div>
+        <div class="community-nodes">
+          <span class="node-chip">自动驾驶</span>
+          <span class="node-chip">医疗诊断</span>
+          <span class="node-chip">智能推荐</span>
+          <span class="node-chip">语音识别</span>
+          <span class="node-chip" style="color:#6b7280">+16 更多</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Centrality Analysis Table -->
+    <div class="panel" style="overflow-x:auto;">
+      <div class="panel-title"><span class="dot"></span>中心性分析</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="sorted">排名 <span class="sort-icon">▼</span></th>
+            <th>名称 <span class="sort-icon">▼</span></th>
+            <th>度中心性 <span class="sort-icon">▼</span></th>
+            <th>介数中心性 <span class="sort-icon">▼</span></th>
+            <th>接近中心性 <span class="sort-icon">▼</span></th>
+            <th>PageRank <span class="sort-icon">▼</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="rank-badge gold">1</span></td>
+            <td style="color:#a5b4fc;font-weight:600">人工智能</td>
+            <td>0.875</td>
+            <td>0.632</td>
+            <td>0.912</td>
+            <td>0.089</td>
+          </tr>
+          <tr>
+            <td><span class="rank-badge silver">2</span></td>
+            <td style="color:#a5b4fc;font-weight:600">深度学习</td>
+            <td>0.812</td>
+            <td>0.587</td>
+            <td>0.876</td>
+            <td>0.076</td>
+          </tr>
+          <tr>
+            <td><span class="rank-badge bronze">3</span></td>
+            <td style="color:#a5b4fc;font-weight:600">清华大学</td>
+            <td>0.750</td>
+            <td>0.543</td>
+            <td>0.845</td>
+            <td>0.068</td>
+          </tr>
+          <tr>
+            <td><span class="rank-badge normal">4</span></td>
+            <td>机器学习</td>
+            <td>0.688</td>
+            <td>0.498</td>
+            <td>0.812</td>
+            <td>0.061</td>
+          </tr>
+          <tr>
+            <td><span class="rank-badge normal">5</span></td>
+            <td>谷歌</td>
+            <td>0.625</td>
+            <td>0.445</td>
+            <td>0.789</td>
+            <td>0.055</td>
+          </tr>
+          <tr>
+            <td><span class="rank-badge normal">6</span></td>
+            <td>北京</td>
+            <td>0.562</td>
+            <td>0.412</td>
+            <td>0.756</td>
+            <td>0.049</td>
+          </tr>
+          <tr>
+            <td><span class="rank-badge normal">7</span></td>
+            <td>自然语言处理</td>
+            <td>0.500</td>
+            <td>0.378</td>
+            <td>0.734</td>
+            <td>0.044</td>
+          </tr>
+          <tr>
+            <td><span class="rank-badge normal">8</span></td>
+            <td>计算机视觉</td>
+            <td>0.438</td>
+            <td>0.334</td>
+            <td>0.712</td>
+            <td>0.039</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Sortable columns
+  document.querySelectorAll('.data-table th').forEach((th, colIdx) => {
+    th.addEventListener('click', () => {
+      const table = th.closest('table');
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const isAsc = th.classList.contains('sorted') && th.querySelector('.sort-icon')?.textContent === '▼';
+
+      // Clear sorted state
+      table.querySelectorAll('th').forEach(h => { h.classList.remove('sorted'); h.querySelector('.sort-icon').textContent = '▼'; });
+      th.classList.add('sorted');
+      th.querySelector('.sort-icon').textContent = isAsc ? '▲' : '▼';
+
+      rows.sort((a, b) => {
+        let aVal = a.cells[colIdx].textContent.trim();
+        let bVal = b.cells[colIdx].textContent.trim();
+        const aNum = parseFloat(aVal), bNum = parseFloat(bVal);
+        if (!isNaN(aNum) && !isNaN(bNum)) return isAsc ? aNum - bNum : bNum - aNum;
+        return isAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+</script>
+</body>
+</html>
