@@ -221,6 +221,9 @@ async def upload_document(file: UploadFile = File(...)):
     # 保存文件
     from config import UPLOAD_DIR
     file_path = UPLOAD_DIR / file.filename
+    # 防止路径穿越：解析后必须在 UPLOAD_DIR 内
+    file_path = Path(os.path.realpath(file_path))
+    assert str(file_path).startswith(str(Path(os.path.realpath(UPLOAD_DIR)))), "非法文件路径"
     content = await file.read()
     file_path.write_bytes(content)
 
