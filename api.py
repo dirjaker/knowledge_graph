@@ -12,6 +12,7 @@
 """
 
 import json
+import os
 import uuid
 import threading
 from pathlib import Path
@@ -33,9 +34,10 @@ from graph_algorithms import GraphAlgorithms
 # ============================================================
 
 app = FastAPI(title="知识图谱系统", version="2.0.0")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost,http://127.0.0.1").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
