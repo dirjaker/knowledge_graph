@@ -118,10 +118,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .doc-item{padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:var(--transition)}
 .doc-item:hover{border-color:var(--accent);box-shadow:var(--shadow-sm)}
 .doc-item.active{border-color:var(--accent);background:var(--accent-light)}
-.doc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.doc-name{font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px}
-.doc-name svg{color:var(--accent)}
-.doc-status{font-size:11px;padding:2px 8px;border-radius:4px}
+.doc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.doc-name{font-size:13px;font-weight:500;display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;word-break:break-all;line-height:1.4}
+.doc-name svg{color:var(--accent);flex-shrink:0;margin-top:2px}
+.doc-status{font-size:11px;padding:2px 8px;border-radius:4px;flex-shrink:0;white-space:nowrap;align-self:flex-start}
 .doc-status.done{background:var(--green-light);color:var(--green)}
 .doc-status.processing{background:var(--yellow-light);color:var(--yellow)}
 .doc-status.pending{background:var(--bg-tertiary);color:var(--text-muted)}
@@ -1457,21 +1457,20 @@ function highlightRelation(sourceId, targetId) {
 // Document Filter
 // ============================================================
 function toggleDocFilter(docId) {
-  // 单选模式：点击同一个文档取消筛选，点击不同文档切换
-  if (selectedDocs.length === 1 && selectedDocs[0] === docId) {
-    selectedDocs = [];
+  // 多选模式：点击切换该文档的选中/取消状态
+  const index = selectedDocs.indexOf(docId);
+  if (index === -1) {
+    selectedDocs.push(docId);
   } else {
-    selectedDocs = [docId];
+    selectedDocs.splice(index, 1);
   }
   
   updateDocumentList();
   updateFilterTags();
   renderGraph();
   
-  // 如果有筛选，自动缩放到该文档的节点
-  if (selectedDocs.length > 0) {
-    setTimeout(fitToNodes, 350);
-  }
+  // 如果有筛选，自动缩放到节点；没有则 fit 全部
+  setTimeout(fitToNodes, 350);
 }
 
 function updateFilterTags() {
