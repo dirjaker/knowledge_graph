@@ -5,9 +5,12 @@ LLM客户端封装
 """
 
 import json
+import logging
 import httpx
 from typing import Optional
 from config import get_llm_config
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
@@ -60,10 +63,15 @@ class LLMClient:
             "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "response_format": {"type": "json_object"},
         }
 
         with httpx.Client(timeout=120) as client:
             resp = client.post(url, json=payload, headers=headers)
+            if resp.status_code != 200:
+                # 如果 response_format 不支持，去掉后重试
+                payload.pop("response_format", None)
+                resp = client.post(url, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()
             return data["choices"][0]["message"]["content"]
@@ -106,7 +114,9 @@ class LLMClient:
         返回: {"entities": [...], "relations": [...]}
         """
         system = """你是一个知识图谱实体和关系抽取专家。
-请从用户提供的文本中抽取实体和关系，返回严格的JSON格式。
+请从用户提供的文本中抽取实体和关系。
+
+重要：你必须且只能返回一个合法的JSON对象，不要返回任何其他文字、解释或markdown标记。
 
 要求：
 1. 实体类型包括：person(人物)、organization(组织)、location(地点)、concept(概念)、event(事件)、technology(技术)、product(产品)、other(其他)
@@ -116,30 +126,69 @@ class LLMClient:
 5. 只抽取文本中明确提到的实体和关系，不要推测
 6. 实体名称要简洁，不要包含多余修饰词
 7. description用一句话简要描述
+8. 返回的JSON必须以 { 开头，以 } 结尾
 
-返回格式（只返回JSON，不要其他文字）：
-{
-  "entities": [
-    {"name": "实体名", "type": "实体类型", "description": "简要描述"}
-  ],
-  "relations": [
-    {"source": "源实体", "target": "目标实体", "type": "关系类型", "evidence": "原文证据"}
-  ]
-}"""
+返回格式：
+{"entities": [{"name": "实体名", "type": "实体类型", "description": "简要描述"}], "relations": [{"source": "源实体", "target": "目标实体", "type": "关系类型", "evidence": "原文证据"}]}"""
 
-        result = self.chat(text, system=system)
+        # 带重试的抽取
+        for attempt in range(2):
+            result = self.chat(text, system=system)
+            
+            try:
+                json_str = self._extract_json(result)
+                parsed = json.loads(json_str)
+                if "entities" not in parsed:
+                    parsed["entities"] = []
+                if "relations" not in parsed:
+                    parsed["relations"] = []
+                return parsed
+            except (json.JSONDecodeError, IndexError, Exception) as e:
+                if attempt == 0:
+                    logger.warning(f"JSON解析失败(第{attempt+1}次): {e}, 重试中...")
+                    continue
+                logger.error(f"JSON解析失败(最终): {e}\n原始响应前500字: {result[:500]}")
+                return {"entities": [], "relations": [], "error": f"LLM返回格式解析失败: {e}", "raw": result[:1000]}
+        
+        return {"entities": [], "relations": [], "error": "LLM返回格式解析失败: 未知错误"}
 
-        # 解析JSON
+    def _extract_json(self, text: str) -> str:
+        """从LLM响应中提取JSON字符串，处理各种格式"""
+        text = text.strip()
+        
+        # 1. 尝试从 markdown 代码块提取
+        for marker in ["```json\n", "```json", "```\n", "```"]:
+            if marker in text:
+                parts = text.split(marker, 1)
+                if len(parts) > 1:
+                    extracted = parts[1].split("```")[0].strip()
+                    if extracted:
+                        return self._fix_json(extracted)
+        
+        # 2. 尝试直接解析整个文本
         try:
-            # 尝试提取JSON部分（LLM有时会加markdown代码块标记）
-            json_str = result
-            if "```json" in result:
-                json_str = result.split("```json")[1].split("```")[0]
-            elif "```" in result:
-                json_str = result.split("```")[1].split("```")[0]
-            return json.loads(json_str.strip())
-        except (json.JSONDecodeError, IndexError):
-            return {"entities": [], "relations": [], "error": "LLM返回格式解析失败", "raw": result}
+            json.loads(text)
+            return text
+        except json.JSONDecodeError:
+            pass
+        
+        # 3. 用正则找第一个 { 到最后一个 }
+        first_brace = text.find('{')
+        last_brace = text.rfind('}')
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            extracted = text[first_brace:last_brace + 1]
+            return self._fix_json(extracted)
+        
+        raise ValueError("无法从响应中提取JSON")
+
+    def _fix_json(self, text: str) -> str:
+        """修复常见的JSON格式问题"""
+        import re
+        # 移除尾部逗号（在 } 或 ] 前面的逗号）
+        text = re.sub(r',\s*([\]}])', r'\1', text)
+        # 移除控制字符（除了换行和制表符）
+        text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
+        return text.strip()
 
     def answer_question(self, question: str, context: str = "") -> str:
         """
