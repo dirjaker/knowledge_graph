@@ -188,7 +188,92 @@ class LLMClient:
         text = re.sub(r',\s*([\]}])', r'\1', text)
         # 移除控制字符（除了换行和制表符）
         text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
-        return text.strip()
+        text = text.strip()
+        
+        # 尝试解析，如果失败则修复截断的JSON
+        try:
+            json.loads(text)
+            return text
+        except json.JSONDecodeError:
+            return self._fix_truncated_json(text)
+    
+    def _fix_truncated_json(self, text: str) -> str:
+        """尝试修复被截断的JSON"""
+        import re
+        # 统计未闭合的括号
+        open_braces = 0
+        open_brackets = 0
+        in_string = False
+        escape_next = False
+        
+        for ch in text:
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == '\\' and in_string:
+                escape_next = True
+                continue
+            if ch == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{':
+                open_braces += 1
+            elif ch == '}':
+                open_braces -= 1
+            elif ch == '[':
+                open_brackets += 1
+            elif ch == ']':
+                open_brackets -= 1
+        
+        # 如果在字符串中间被截断，先关闭字符串
+        if in_string:
+            text += '"'
+        
+        # 移除最后一个不完整的元素（可能截断在值中间）
+        # 找最后一个完整的 } 或 ] 之后的内容
+        last_complete = max(text.rfind('}'), text.rfind(']'))
+        if last_complete > 0:
+            # 检查最后一个完整结构之后是否有残留
+            remainder = text[last_complete + 1:].strip()
+            if remainder and not remainder.startswith(',') and not remainder in ('}', ']'):
+                # 有残留内容，截断到最后一个完整结构
+                text = text[:last_complete + 1]
+                # 重新计算括号
+                open_braces = 0
+                open_brackets = 0
+                in_string = False
+                escape_next = False
+                for ch in text:
+                    if escape_next:
+                        escape_next = False
+                        continue
+                    if ch == '\\' and in_string:
+                        escape_next = True
+                        continue
+                    if ch == '"' and not escape_next:
+                        in_string = not in_string
+                        continue
+                    if in_string:
+                        continue
+                    if ch == '{':
+                        open_braces += 1
+                    elif ch == '}':
+                        open_braces -= 1
+                    elif ch == '[':
+                        open_brackets += 1
+                    elif ch == ']':
+                        open_brackets -= 1
+        
+        # 移除尾部逗号
+        text = re.sub(r',\s*$', '', text)
+        
+        # 闭合未关闭的括号
+        text += ']' * max(0, open_brackets)
+        text += '}' * max(0, open_braces)
+        
+        return text
 
     def answer_question(self, question: str, context: str = "") -> str:
         """

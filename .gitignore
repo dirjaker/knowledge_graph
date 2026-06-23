@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 data/
+!data/test_documents/
 .env
 *.db
 *.egg-info/
