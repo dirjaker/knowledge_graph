@@ -8,9 +8,9 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg-primary:#111318;
-  --bg-secondary:#0a0c10;
-  --bg-tertiary:#16181e;
+  --bg-primary:#13161d;
+  --bg-secondary:#0e1017;
+  --bg-tertiary:#181b24;
   --bg-elevated:#1a1c24;
   --border:#1e2128;
   --border-subtle:#181b22;
@@ -43,7 +43,7 @@
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-secondary);color:var(--text-primary);min-height:100vh;overflow:hidden}
 
 /* Layout */
-.app{display:grid;grid-template-columns:300px 1fr 340px;grid-template-rows:60px 1fr;height:100vh}
+.app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:60px 1fr;height:100vh}
 
 /* Header */
 .header{grid-column:1/-1;background:var(--bg-primary);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;z-index:100;box-shadow:var(--shadow-sm)}
@@ -52,7 +52,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .logo-icon svg{width:18px;height:18px;color:#fff}
 .header-center{flex:1;display:flex;justify-content:center}
 .search-global{width:420px;position:relative}
-.search-global input{width:100%;padding:9px 14px 9px 38px;background:var(--bg-tertiary);border:1px solid transparent;border-radius:var(--radius);color:var(--text-primary);font-size:13px;outline:none;transition:var(--transition)}
+.search-global input{width:100%;padding:9px 14px 9px 38px;background:var(--bg-tertiary);border:1px solid #2a2d35;border-radius:var(--radius);color:var(--text-primary);font-size:13px;outline:none;transition:var(--transition)}
 .search-global input:focus{background:var(--bg-primary);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
 .search-global input::placeholder{color:var(--text-muted)}
 .search-global svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)}
@@ -149,7 +149,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .graph-container svg{width:100%;height:100%}
 
 /* Graph Background Pattern */
-.graph-bg{position:absolute;inset:0;background-image:radial-gradient(circle,#1e2128 1px,transparent 1px);background-size:24px 24px;opacity:0.5;pointer-events:none}
+.graph-bg{position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none}
 
 /* Graph Controls - 左下角 */
 .graph-controls{position:absolute;bottom:12px;left:12px;display:flex;flex-direction:column;gap:0;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-xs);padding:2px;z-index:10}
@@ -164,9 +169,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .layout-selector{display:inline-flex;align-items:center}
 .layout-selector select{padding:4px 20px 4px 8px;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-secondary);font-size:11px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238c919a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 
-/* Right Panel */
-.right-panel{background:var(--bg-primary);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.3s ease;position:relative}
-.right-panel.open{transform:translateX(0)}
+/* Right Panel - Modal */
+.right-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.95);width:420px;max-height:80vh;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 40px rgba(0,0,0,0.6);display:none;flex-direction:column;overflow:hidden;z-index:1001;opacity:0;transition:opacity 0.2s ease,transform 0.2s ease}
+.right-panel.open{display:flex;opacity:1;transform:translate(-50%,-50%) scale(1)}
+.right-panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;backdrop-filter:blur(4px)}
+.right-panel-overlay.visible{display:block}
 
 /* Right Panel */
 .detail-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -409,8 +416,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     </div>
     <div class="filter-tags" id="filterTags" style="display:none"></div>
     <div class="graph-info" id="graphInfo" style="display:none">
-      <div class="info-badge">缩放: <span id="zoomLevel">100%</span></div>
-      <div class="info-badge">节点: <span id="visibleNodes">0</span></div>
+      <div class="info-badge"><span id="zoomLevel">100%</span></div>
       <div class="layout-selector">
         <select id="layoutSelect" onchange="changeLayout(this.value)">
           <option value="force">力导向布局</option>
@@ -435,10 +441,16 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
           <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
         </svg>
       </button>
+      <button class="btn btn-icon" onclick="zoomToFit()" title="全局视图" style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+        </svg>
+      </button>
     </div>
   </div>
 
-  <!-- Right Panel - Detail -->
+  <!-- Right Panel - Detail Modal -->
+  <div class="right-panel-overlay" id="detailOverlay" onclick="closeDetail()"></div>
   <div class="right-panel" id="detailPanel">
     <div class="detail-header">
       <div class="detail-title" id="detailTitle">详情</div>
@@ -792,7 +804,7 @@ async function loadData() {
       type: e.entity_type,
       description: e.description,
       properties: e.properties,
-      sources: e.sources || []
+      source_doc_ids: e.source_doc_ids || []
     });
   });
   
@@ -802,7 +814,7 @@ async function loadData() {
     type: r.type || r.relation_type,
     weight: r.weight,
     evidence: r.evidence,
-    sources: r.sources || []
+    source_doc_ids: r.source_doc_ids || []
   })).filter(l => nodeMap.has(l.source) && nodeMap.has(l.target));
   
   graphData = {
@@ -962,7 +974,7 @@ function renderGraph() {
   
   if (selectedDocs.length > 0) {
     filteredNodes = graphData.nodes.filter(n => 
-      n.sources.some(s => selectedDocs.includes(s.document_id))
+      n.source_doc_ids.some(d => selectedDocs.includes(d))
     );
     const nodeIds = new Set(filteredNodes.map(n => n.id));
     filteredLinks = graphData.links.filter(l => 
@@ -981,7 +993,7 @@ function renderGraph() {
   emptyState.style.display = 'none';
   graphInfo.style.display = 'flex';
   document.getElementById('graphControls').style.display = 'flex';
-  document.getElementById('visibleNodes').textContent = filteredNodes.length;
+  // visibleNodes removed - info shown in left sidebar stats
   
   g.selectAll('*').remove();
   
@@ -1052,7 +1064,7 @@ function renderGraph() {
   
   // Node outer glow ring
   node.append('circle')
-    .attr('r', d => getNodeRadius(d) + 6)
+    .attr('r', d => getNodeRadius(d) + 8)
     .attr('fill', 'none')
     .attr('stroke', d => typeColors[d.type])
     .attr('stroke-width', 1.5)
@@ -1063,7 +1075,7 @@ function renderGraph() {
   node.append('circle')
     .attr('r', d => getNodeRadius(d))
     .attr('fill', d => typeColors[d.type])
-    .attr('stroke', '#111318')
+    .attr('stroke', '#13161d')
     .attr('stroke-width', 2)
     .style('cursor', 'pointer')
     .style('filter', 'url(#glow)')
@@ -1085,16 +1097,19 @@ function renderGraph() {
     .attr('font-weight', '500')
     .attr('fill', '#94a3b8')
     .attr('text-anchor', 'middle')
-    .attr('dy', d => getNodeRadius(d) + 16)
+    .attr('dy', d => getNodeRadius(d) + 20)
     .style('pointer-events', 'none');
   
   // Simulation
   if (currentLayout === 'force') {
     simulation = d3.forceSimulation(filteredNodes)
-      .force('link', d3.forceLink(filteredLinks).id(d => d.id).distance(120))
-      .force('charge', d3.forceManyBody().strength(-400))
-      .force('center', d3.forceCenter(container.clientWidth / 2, container.clientHeight / 2))
-      .force('collision', d3.forceCollide().radius(40));
+      .velocityDecay(0.4)
+      .force('link', d3.forceLink(filteredLinks).id(d => d.id).distance(180))
+      .force('charge', d3.forceManyBody().strength(-600).distanceMax(500))
+      .force('center', d3.forceCenter(container.clientWidth / 2, container.clientHeight / 2).strength(0.03))
+      .force('collision', d3.forceCollide().radius(60).strength(1))
+      .force('x', d3.forceX(container.clientWidth / 2).strength(0.005))
+      .force('y', d3.forceY(container.clientHeight / 2).strength(0.005));
     
     simulation.on('tick', () => {
       link.attr('d', d => {
@@ -1162,14 +1177,14 @@ function getNodeRadius(d) {
   const connections = graphData.links.filter(l => 
     (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id
   ).length;
-  return Math.max(16, Math.min(28, 12 + connections * 2));
+  return Math.max(20, Math.min(36, 16 + connections * 2.5));
 }
 
 // ============================================================
 // Drag
 // ============================================================
 function dragstarted(event, d) {
-  if (simulation) simulation.alphaTarget(0.3).restart();
+  if (simulation) simulation.alphaTarget(0.1).restart();
   d.fx = d.x;
   d.fy = d.y;
 }
@@ -1225,6 +1240,7 @@ function showDetail(d) {
   const content = document.getElementById('detailContent');
   
   panel.classList.add('open');
+  document.getElementById('detailOverlay').classList.add('visible');
   title.textContent = d.name;
   
   const connections = graphData.links.filter(l => 
@@ -1274,6 +1290,7 @@ function showDetail(d) {
 
 function closeDetail() {
   document.getElementById('detailPanel').classList.remove('open');
+  document.getElementById('detailOverlay').classList.remove('visible');
   selectedNode = null;
   
   g.selectAll('.nodes circle:nth-child(2)').attr('opacity', 1);
@@ -1440,16 +1457,21 @@ function highlightRelation(sourceId, targetId) {
 // Document Filter
 // ============================================================
 function toggleDocFilter(docId) {
-  const index = selectedDocs.indexOf(docId);
-  if (index === -1) {
-    selectedDocs.push(docId);
+  // 单选模式：点击同一个文档取消筛选，点击不同文档切换
+  if (selectedDocs.length === 1 && selectedDocs[0] === docId) {
+    selectedDocs = [];
   } else {
-    selectedDocs.splice(index, 1);
+    selectedDocs = [docId];
   }
   
   updateDocumentList();
   updateFilterTags();
   renderGraph();
+  
+  // 如果有筛选，自动缩放到该文档的节点
+  if (selectedDocs.length > 0) {
+    setTimeout(fitToNodes, 350);
+  }
 }
 
 function updateFilterTags() {
@@ -1481,6 +1503,7 @@ function clearDocFilter() {
   updateDocumentList();
   updateFilterTags();
   renderGraph();
+  setTimeout(fitToNodes, 350);
 }
 
 // ============================================================
@@ -1581,6 +1604,48 @@ function resetZoom() {
   svg.transition().duration(500).call(
     zoom.transform,
     d3.zoomIdentity.translate(container.clientWidth / 2, container.clientHeight / 2).scale(1)
+  );
+}
+
+function zoomToFit() {
+  selectedDocs = [];
+  updateDocumentList();
+  updateFilterTags();
+  renderGraph();
+  setTimeout(fitToNodes, 300);
+}
+
+function fitToNodes() {
+  // 使用 filteredNodes（与当前显示一致）
+  let nodes = graphData.nodes;
+  if (selectedDocs.length > 0) {
+    nodes = nodes.filter(n => n.source_doc_ids.some(d => selectedDocs.includes(d)));
+  }
+  if (!nodes || nodes.length === 0) return;
+  
+  const container = document.getElementById('graphContainer');
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  const pad = 80;
+  
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    const x = n.x || 0, y = n.y || 0, r = getNodeRadius(n) || 20;
+    if (x - r < minX) minX = x - r;
+    if (x + r > maxX) maxX = x + r;
+    if (y - r < minY) minY = y - r;
+    if (y + r > maxY) maxY = y + r;
+  });
+  
+  const dx = maxX - minX || 1;
+  const dy = maxY - minY || 1;
+  const scale = Math.min((w - pad * 2) / dx, (h - pad * 2) / dy, 1.5);
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  
+  svg.transition().duration(500).call(
+    zoom.transform,
+    d3.zoomIdentity.translate(w / 2, h / 2).scale(scale).translate(-cx, -cy)
   );
 }
 
