@@ -157,8 +157,9 @@ class Database:
         return None
 
     def search_entities(self, keyword: str = "", entity_type: str = "",
+                        document_id: str = "",
                         limit: int = 100, offset: int = 0) -> list[dict]:
-        """搜索实体"""
+        """搜索实体，支持按文档ID筛选"""
         conditions = []
         params = []
         if keyword:
@@ -167,6 +168,10 @@ class Database:
         if entity_type:
             conditions.append("entity_type = ?")
             params.append(entity_type)
+        if document_id:
+            # source_doc_ids 是 JSON 数组，用 LIKE 匹配包含该 document_id 的记录
+            conditions.append("source_doc_ids LIKE ?")
+            params.append(f'%"{document_id}"%')
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         params.extend([limit, offset])
 
@@ -177,16 +182,19 @@ class Database:
             """, params).fetchall()
             return [self._row_to_entity(r) for r in rows]
 
-    def count_entities(self, entity_type: str = "") -> int:
-        """统计实体数量"""
+    def count_entities(self, entity_type: str = "", document_id: str = "") -> int:
+        """统计实体数量，支持按文档ID筛选"""
+        conditions = []
+        params = []
+        if entity_type:
+            conditions.append("entity_type = ?")
+            params.append(entity_type)
+        if document_id:
+            conditions.append("source_doc_ids LIKE ?")
+            params.append(f'%"{document_id}"%')
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         with self._conn() as conn:
-            if entity_type:
-                row = conn.execute(
-                    "SELECT COUNT(*) FROM entities WHERE entity_type = ?",
-                    (entity_type,)
-                ).fetchone()
-            else:
-                row = conn.execute("SELECT COUNT(*) FROM entities").fetchone()
+            row = conn.execute(f"SELECT COUNT(*) FROM entities {where}", params).fetchone()
             return row[0]
 
     def delete_entity(self, name: str) -> bool:
@@ -254,6 +262,7 @@ class Database:
 
     def get_relations(self, entity_name: str = "",
                       relation_type: str = "",
+                      document_id: str = "",
                       limit: int = 200) -> list[dict]:
         """获取关系列表"""
         conditions = []
@@ -264,6 +273,9 @@ class Database:
         if relation_type:
             conditions.append("relation_type=?")
             params.append(relation_type)
+        if document_id:
+            conditions.append("source_doc_ids LIKE ?")
+            params.append(f'%"{document_id}"%')
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         params.append(limit)
 
@@ -400,14 +412,14 @@ class Database:
     # ==================== 导入任务 ====================
 
     def create_ingest_task(self, input_type: str = "text",
-                           input_text: str = "") -> str:
+                           input_text: str = "", filename: str = "") -> str:
         """创建导入任务"""
         task_id = f"t_{uuid.uuid4().hex[:12]}"
         with self._conn() as conn:
             conn.execute("""
-                INSERT INTO ingest_tasks (id, status, input_type, input_text)
-                VALUES (?, 'processing', ?, ?)
-            """, (task_id, input_type, input_text))
+                INSERT INTO ingest_tasks (id, status, input_type, input_text, filename)
+                VALUES (?, 'processing', ?, ?, ?)
+            """, (task_id, input_type, input_text, filename))
         return task_id
 
     def update_ingest_task(self, task_id: str, status: str = None,
@@ -448,6 +460,7 @@ class Database:
                     "status": row["status"],
                     "input_type": row["input_type"],
                     "input_text": row["input_text"],
+                    "filename": row["filename"] if "filename" in row.keys() else "",
                     "entities": json.loads(row["entities_json"]),
                     "relations": json.loads(row["relations_json"]),
                     "error": row["error"],
@@ -499,6 +512,12 @@ class Database:
             conn.execute("DELETE FROM entities")
             conn.execute("DELETE FROM documents")
             conn.execute("DELETE FROM ingest_tasks")
+
+    def clear_demo_data(self):
+        """清除示例数据（source_doc_ids 包含 'demo' 的记录）"""
+        with self._conn() as conn:
+            conn.execute("DELETE FROM relations WHERE source_doc_ids LIKE '%\"demo\"%'")
+            conn.execute("DELETE FROM entities WHERE source_doc_ids LIKE '%\"demo\"%'")
 
     def export_data(self) -> dict:
         """导出全部数据"""
@@ -612,8 +631,14 @@ class Database:
         return None
 
     def delete_document(self, doc_id: str) -> bool:
-        """删除文档"""
+        """删除文档及其关联的实体和关系"""
         with self._conn() as conn:
+            # 删除该文档关联的实体和关系
+            conn.execute("DELETE FROM relations WHERE source_doc_ids LIKE ?",
+                         (f'%"{doc_id}"%',))
+            conn.execute("DELETE FROM entities WHERE source_doc_ids LIKE ?",
+                         (f'%"{doc_id}"%',))
+            # 删除文档记录
             cursor = conn.execute("DELETE FROM documents WHERE id=?", (doc_id,))
             return cursor.rowcount > 0
 

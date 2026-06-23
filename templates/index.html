@@ -8,33 +8,33 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg-primary:#ffffff;
-  --bg-secondary:#f8f9fb;
-  --bg-tertiary:#f0f2f5;
-  --bg-elevated:#ffffff;
-  --border:#e2e5ea;
-  --border-subtle:#eef0f3;
-  --text-primary:#1a1d23;
-  --text-secondary:#5f6672;
-  --text-muted:#8c919a;
-  --accent:#4f6ef7;
-  --accent-hover:#3d5ce5;
-  --accent-light:#eef1fe;
-  --green:#22c55e;
-  --green-light:#edfcf2;
-  --red:#ef4444;
-  --red-light:#fef2f2;
-  --yellow:#f59e0b;
-  --yellow-light:#fef9ec;
-  --cyan:#06b6d4;
-  --cyan-light:#ecfeff;
-  --purple:#8b5cf6;
-  --purple-light:#f3f0ff;
-  --orange:#f97316;
-  --orange-light:#fff7ed;
-  --shadow-sm:0 1px 3px rgba(0,0,0,0.06);
-  --shadow:0 4px 16px rgba(0,0,0,0.08);
-  --shadow-lg:0 8px 32px rgba(0,0,0,0.12);
+  --bg-primary:#111318;
+  --bg-secondary:#0a0c10;
+  --bg-tertiary:#16181e;
+  --bg-elevated:#1a1c24;
+  --border:#1e2128;
+  --border-subtle:#181b22;
+  --text-primary:#e2e8f0;
+  --text-secondary:#94a3b8;
+  --text-muted:#64748b;
+  --accent:#818cf8;
+  --accent-hover:#6366f1;
+  --accent-light:rgba(129,140,248,0.1);
+  --green:#4ade80;
+  --green-light:rgba(74,222,128,0.1);
+  --red:#f87171;
+  --red-light:rgba(248,113,113,0.1);
+  --yellow:#fbbf24;
+  --yellow-light:rgba(251,191,36,0.1);
+  --cyan:#22d3ee;
+  --cyan-light:rgba(34,211,238,0.1);
+  --purple:#a78bfa;
+  --purple-light:rgba(167,139,250,0.1);
+  --orange:#fb923c;
+  --orange-light:rgba(251,146,60,0.1);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.3);
+  --shadow:0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg:0 8px 32px rgba(0,0,0,0.5);
   --radius:12px;
   --radius-sm:8px;
   --radius-xs:6px;
@@ -48,7 +48,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 /* Header */
 .header{grid-column:1/-1;background:var(--bg-primary);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;z-index:100;box-shadow:var(--shadow-sm)}
 .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--accent)}
-.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#818cf8,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center}
 .logo-icon svg{width:18px;height:18px;color:#fff}
 .header-center{flex:1;display:flex;justify-content:center}
 .search-global{width:420px;position:relative}
@@ -93,7 +93,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .entity-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);margin-bottom:2px}
 .entity-item:hover{background:var(--bg-tertiary)}
 .entity-item.active{background:var(--accent-light)}
-.entity-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,255,255,0.8)}
+.entity-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;filter:drop-shadow(0 0 4px currentColor)}
 .entity-info{flex:1;min-width:0}
 .entity-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .entity-type{font-size:11px;color:var(--text-muted)}
@@ -136,13 +136,20 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .upload-text{font-size:13px;color:var(--text-secondary)}
 .upload-hint{font-size:11px;color:var(--text-muted);margin-top:4px}
 
+/* Global Drag Overlay - 全页面拖拽提示 */
+.drag-overlay{position:fixed;inset:0;background:rgba(129,140,248,0.06);border:3px dashed var(--accent);z-index:9999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.drag-overlay.visible{display:flex}
+.drag-overlay-box{background:var(--bg-primary);border:1px solid var(--accent);border-radius:var(--radius);padding:32px 48px;text-align:center;box-shadow:var(--shadow-lg)}
+.drag-overlay-box svg{color:var(--accent);margin-bottom:12px}
+.drag-overlay-box p{font-size:15px;font-weight:600;color:var(--accent);margin:0}
+
 /* Center */
 .center{position:relative;overflow:hidden;background:var(--bg-secondary)}
 .graph-container{width:100%;height:100%}
 .graph-container svg{width:100%;height:100%}
 
 /* Graph Background Pattern */
-.graph-bg{position:absolute;inset:0;background-image:radial-gradient(circle,var(--border) 1px,transparent 1px);background-size:24px 24px;opacity:0.5;pointer-events:none}
+.graph-bg{position:absolute;inset:0;background-image:radial-gradient(circle,#1e2128 1px,transparent 1px);background-size:24px 24px;opacity:0.5;pointer-events:none}
 
 /* Graph Controls - 左下角 */
 .graph-controls{position:absolute;bottom:12px;left:12px;display:flex;flex-direction:column;gap:0;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-xs);padding:2px;z-index:10}
@@ -181,14 +188,14 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .connection-type{font-size:11px;color:var(--accent);background:var(--accent-light);padding:3px 8px;border-radius:4px;font-weight:500}
 
 /* Type Colors */
-.type-person{background:var(--red)}
-.type-organization{background:var(--accent)}
-.type-location{background:var(--green)}
-.type-technology{background:var(--yellow)}
-.type-concept{background:var(--purple)}
-.type-event{background:var(--cyan)}
-.type-product{background:var(--orange)}
-.type-other{background:var(--text-muted)}
+.type-person{background:#818cf8}
+.type-organization{background:#f472b6}
+.type-location{background:#34d399}
+.type-technology{background:#a78bfa}
+.type-concept{background:#22d3ee}
+.type-event{background:#fb923c}
+.type-product{background:#fbbf24}
+.type-other{background:#64748b}
 
 /* Badge Colors */
 .badge{padding:3px 10px;border-radius:4px;font-size:11px;font-weight:500;display:inline-flex;align-items:center;gap:4px;background:var(--bg-tertiary);color:var(--text-secondary)}
@@ -205,7 +212,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .empty-state p{font-size:13px}
 
 /* Modal */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
 .modal-overlay.visible{display:flex}
 .modal{background:var(--bg-primary);border-radius:var(--radius);box-shadow:var(--shadow-lg);width:90%;max-width:500px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column}
 .modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -231,8 +238,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 /* Scrollbar */
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+::-webkit-scrollbar-thumb{background:#2a2d35;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#3a3d45}
 
 /* Animation */
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -253,6 +260,16 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 </style>
 </head>
 <body>
+
+<!-- 全局拖拽上传遮罩 -->
+<div class="drag-overlay" id="dragOverlay">
+  <div class="drag-overlay-box">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+    </svg>
+    <p>松手上传文档</p>
+  </div>
+</div>
 
 <div class="app">
   <!-- Header -->
@@ -292,6 +309,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
       <button class="btn btn-sm btn-icon" onclick="clearGraph()" title="清空图谱">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+        </svg>
+      </button>
+      <button class="btn btn-sm btn-icon" onclick="openSettings()" title="设置">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
         </svg>
       </button>
     </div>
@@ -527,6 +549,70 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   </div>
 </div>
 
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">设置</div>
+      <div class="modal-close" onclick="closeModal('settingsModal')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div style="margin-bottom:20px">
+        <h4 style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px">LLM 模型配置</h4>
+        
+        <label style="display:block;margin-bottom:12px">
+          <span style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Provider</span>
+          <select id="cfgProvider" style="width:100%;padding:8px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none">
+            <option value="deepseek">DeepSeek</option>
+            <option value="ollama">Ollama (本地)</option>
+            <option value="openai">OpenAI 兼容</option>
+          </select>
+        </label>
+        
+        <label style="display:block;margin-bottom:12px">
+          <span style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">API Key</span>
+          <input type="password" id="cfgApiKey" placeholder="sk-..." style="width:100%;padding:8px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;box-sizing:border-box">
+        </label>
+        
+        <label style="display:block;margin-bottom:12px">
+          <span style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Base URL</span>
+          <input type="text" id="cfgBaseUrl" placeholder="https://api.deepseek.com" style="width:100%;padding:8px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;box-sizing:border-box">
+        </label>
+        
+        <label style="display:block;margin-bottom:12px">
+          <span style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">模型名称</span>
+          <input type="text" id="cfgModel" placeholder="deepseek-chat" style="width:100%;padding:8px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;box-sizing:border-box">
+        </label>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="display:block">
+            <span style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Temperature</span>
+            <input type="number" id="cfgTemp" step="0.1" min="0" max="2" style="width:100%;padding:8px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;box-sizing:border-box">
+          </label>
+          <label style="display:block">
+            <span style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Max Tokens</span>
+            <input type="number" id="cfgMaxTokens" step="256" min="256" style="width:100%;padding:8px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;outline:none;box-sizing:border-box">
+          </label>
+        </div>
+      </div>
+      
+      <div id="settingsStatus" style="font-size:12px;padding:8px 12px;border-radius:var(--radius-sm);display:none;margin-bottom:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="testLLM()" style="margin-right:auto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        测试连接
+      </button>
+      <button class="btn" onclick="closeModal('settingsModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="tooltip" id="tooltip"></div>
 
 <script>
@@ -544,14 +630,14 @@ let editingEntity = null;
 let editingRelation = null;
 
 const typeColors = {
-  person: '#b0b8c4',
-  organization: '#b0b8c4',
-  location: '#b0b8c4',
-  technology: '#b0b8c4',
-  concept: '#b0b8c4',
-  event: '#b0b8c4',
-  product: '#b0b8c4',
-  other: '#b0b8c4'
+  person: '#818cf8',
+  organization: '#f472b6',
+  location: '#34d399',
+  technology: '#a78bfa',
+  concept: '#22d3ee',
+  event: '#fb923c',
+  product: '#fbbf24',
+  other: '#64748b'
 };
 
 const typeLabels = {
@@ -647,21 +733,41 @@ function initGraph() {
 }
 
 function initDragDrop() {
-  const uploadArea = document.getElementById('uploadArea');
-  
-  uploadArea.addEventListener('dragover', (e) => {
+  const overlay = document.getElementById('dragOverlay');
+  let dragCounter = 0;
+
+  // 拖文件进入页面时显示遮罩
+  document.addEventListener('dragenter', (e) => {
     e.preventDefault();
-    uploadArea.classList.add('dragover');
+    dragCounter++;
+    if (e.dataTransfer.types.includes('Files')) {
+      overlay.classList.add('visible');
+    }
   });
-  
-  uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('dragover');
-  });
-  
-  uploadArea.addEventListener('drop', (e) => {
+
+  document.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    handleFileUpload(e.dataTransfer.files);
+    e.dataTransfer.dropEffect = 'copy';
+  });
+
+  document.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      overlay.classList.remove('visible');
+    }
+  });
+
+  // 全页面 drop — 任意位置放下文件都上传
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    overlay.classList.remove('visible');
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files);
+    }
   });
 }
 
@@ -724,12 +830,23 @@ async function handleFileUpload(files) {
     formData.append('file', file);
     
     try {
+      // 上传文件，获取 task_id
       const result = await API.upload('/api/documents/upload', formData);
       
-      if (result.status === 'review') {
-        showReviewModal(result);
+      if (result.task_id) {
+        // 轮询等待 LLM 处理完成
+        showProcessingToast(file.name);
+        const taskResult = await pollTask(result.task_id);
+        hideProcessingToast();
+        
+        if (taskResult.status === 'completed') {
+          showReviewModal(taskResult);
+        } else if (taskResult.error) {
+          alert('处理失败: ' + taskResult.error);
+        }
       }
     } catch (err) {
+      hideProcessingToast();
       alert('上传失败: ' + err.message);
     }
   }
@@ -737,29 +854,66 @@ async function handleFileUpload(files) {
   loadDocuments();
 }
 
+// 轮询任务状态
+async function pollTask(taskId) {
+  const maxAttempts = 120; // 最多等 2 分钟
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const task = await API.get(`/api/tasks/${taskId}`);
+      if (task.status === 'completed' || task.error) {
+        return task;
+      }
+    } catch (e) {
+      // 继续轮询
+    }
+  }
+  return {status: 'timeout', error: '处理超时'};
+}
+
+// 处理中的 toast 提示
+let toastEl = null;
+function showProcessingToast(filename) {
+  toastEl = document.createElement('div');
+  toastEl.id = 'processingToast';
+  toastEl.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;box-shadow:var(--shadow-lg);z-index:9999;display:flex;align-items:center;gap:10px;font-size:13px';
+  toastEl.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"><animate attributeName="stroke-dashoffset" values="32;0" dur="1s" repeatCount="indefinite"/></circle></svg> 正在分析 <b>${filename}</b>，请稍候...`;
+  document.body.appendChild(toastEl);
+}
+function hideProcessingToast() {
+  if (toastEl) { toastEl.remove(); toastEl = null; }
+}
+
 // ============================================================
 // Document Review
 // ============================================================
-function showReviewModal(doc) {
-  document.getElementById('reviewTitle').textContent = doc.filename;
+// 当前审核的任务数据
+let currentReviewTask = null;
+
+function showReviewModal(task) {
+  currentReviewTask = task;
+  document.getElementById('reviewTitle').textContent = task.filename || task.input_type || '文档分析结果';
+  
+  const entities = task.entities || [];
+  const relations = task.relations || [];
   
   let html = `
     <div style="margin-bottom:16px">
-      <h4 style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">抽取的实体 (${doc.entities.length})</h4>
+      <h4 style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">抽取的实体 (${entities.length})</h4>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
   `;
   
-  doc.entities.forEach(e => {
+  entities.forEach(e => {
     html += `<span class="badge badge-${e.entity_type}">${e.name}</span>`;
   });
   
   html += `</div></div>
     <div>
-      <h4 style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">识别的关系 (${doc.relations.length})</h4>
+      <h4 style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">识别的关系 (${relations.length})</h4>
       <div style="display:flex;flex-direction:column;gap:6px">
   `;
   
-  doc.relations.forEach((r, i) => {
+  relations.forEach((r, i) => {
     html += `
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg-tertiary);border-radius:6px">
         <span style="font-size:12px">${r.source}</span>
@@ -776,7 +930,19 @@ function showReviewModal(doc) {
 }
 
 async function confirmDocument() {
-  // TODO: Save to backend
+  if (!currentReviewTask) return;
+  
+  try {
+    await API.post('/api/documents/ingest-confirm', {
+      task_id: currentReviewTask.id,
+      entities: currentReviewTask.entities || [],
+      relations: currentReviewTask.relations || []
+    });
+  } catch (err) {
+    console.error('确认导入失败:', err);
+  }
+  
+  currentReviewTask = null;
   closeModal('reviewModal');
   await loadData();
   await loadDocuments();
@@ -833,7 +999,7 @@ function renderGraph() {
     .attr('orient', 'auto')
     .append('path')
     .attr('d', 'M0,-4L10,0L0,4')
-    .attr('fill', '#c8ccd4');
+    .attr('fill', '#334155');
   
   // Node glow filter
   const filter = defs.append('filter')
@@ -843,7 +1009,7 @@ function renderGraph() {
     .attr('width', '200%')
     .attr('height', '200%');
   filter.append('feGaussianBlur')
-    .attr('stdDeviation', '3')
+    .attr('stdDeviation', '6')
     .attr('result', 'coloredBlur');
   const feMerge = filter.append('feMerge');
   feMerge.append('feMergeNode').attr('in', 'coloredBlur');
@@ -856,7 +1022,7 @@ function renderGraph() {
     .data(filteredLinks)
     .join('path')
     .attr('fill', 'none')
-    .attr('stroke', '#e2e5ea')
+    .attr('stroke', '#1e293b')
     .attr('stroke-width', d => Math.max(1.5, d.weight || 1.5))
     .attr('marker-end', 'url(#arrowhead)');
   
@@ -868,7 +1034,7 @@ function renderGraph() {
     .join('text')
     .text(d => d.type)
     .attr('font-size', '10px')
-    .attr('fill', '#8c919a')
+    .attr('fill', '#475569')
     .attr('text-anchor', 'middle')
     .attr('dy', -6)
     .style('pointer-events', 'none');
@@ -884,14 +1050,23 @@ function renderGraph() {
       .on('drag', dragged)
       .on('end', dragended));
   
-  // Node outer circle (glow)
-  // Node main circle
+  // Node outer glow ring
+  node.append('circle')
+    .attr('r', d => getNodeRadius(d) + 6)
+    .attr('fill', 'none')
+    .attr('stroke', d => typeColors[d.type])
+    .attr('stroke-width', 1.5)
+    .attr('opacity', 0.25)
+    .style('pointer-events', 'none');
+
+  // Node main circle with glow
   node.append('circle')
     .attr('r', d => getNodeRadius(d))
     .attr('fill', d => typeColors[d.type])
-    .attr('stroke', '#fff')
+    .attr('stroke', '#111318')
     .attr('stroke-width', 2)
     .style('cursor', 'pointer')
+    .style('filter', 'url(#glow)')
     .on('mouseover', showTooltip)
     .on('mouseout', hideTooltip)
     .on('click', (e, d) => {
@@ -908,7 +1083,7 @@ function renderGraph() {
     .text(d => d.name.length > 8 ? d.name.slice(0, 8) + '...' : d.name)
     .attr('font-size', '11px')
     .attr('font-weight', '500')
-    .attr('fill', '#1a1d23')
+    .attr('fill', '#94a3b8')
     .attr('text-anchor', 'middle')
     .attr('dy', d => getNodeRadius(d) + 16)
     .style('pointer-events', 'none');
@@ -1033,11 +1208,13 @@ function selectNode(d) {
   selectedNode = d;
   
   g.selectAll('.nodes circle:nth-child(2)')
-    .attr('opacity', n => n.id === d.id ? 1 : 0.4);
+    .attr('opacity', n => n.id === d.id ? 1 : 0.3);
+  g.selectAll('.nodes circle:nth-child(1)')
+    .attr('opacity', n => n.id === d.id ? 0.4 : 0.1);
   g.selectAll('.links path')
-    .attr('opacity', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 1 : 0.15);
+    .attr('opacity', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 1 : 0.1);
   g.selectAll('.link-labels text')
-    .attr('opacity', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 1 : 0.15);
+    .attr('opacity', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id ? 1 : 0.1);
   
   showDetail(d);
 }
@@ -1100,6 +1277,7 @@ function closeDetail() {
   selectedNode = null;
   
   g.selectAll('.nodes circle:nth-child(2)').attr('opacity', 1);
+  g.selectAll('.nodes circle:nth-child(1)').attr('opacity', 0.25);
   g.selectAll('.links path').attr('opacity', 1);
   g.selectAll('.link-labels text').attr('opacity', 1);
 }
@@ -1125,7 +1303,7 @@ function updateEntityList() {
   
   list.innerHTML = graphData.nodes.map(n => `
     <div class="entity-item ${selectedNode?.id === n.id ? 'active' : ''}" onclick="selectNode(graphData.nodes.find(node => node.id === '${n.id}'))">
-      <div class="entity-dot" style="background:${typeColors[n.type]}"></div>
+      <div class="entity-dot" style="background:${typeColors[n.type]};color:${typeColors[n.type]}"></div>
       <div class="entity-info">
         <div class="entity-name">${n.name}</div>
         <div class="entity-type">${typeLabels[n.type] || n.type}</div>
@@ -1133,6 +1311,54 @@ function updateEntityList() {
       <div class="entity-count">${connectionCount[n.id] || 0}</div>
     </div>
   `).join('');
+}
+
+// ============================================================
+// Document-based Entity Filter
+// ============================================================
+let currentDocFilter = null; // {id, name}
+
+async function filterByDocument(docId, docName) {
+  currentDocFilter = { id: docId, name: docName };
+  
+  // 切换到实体 tab
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector('.tab[data-tab="entities"]').classList.add('active');
+  document.getElementById('tab-entities').classList.add('active');
+  
+  // 从 API 获取该文档的实体
+  const entities = await API.get(`/api/entities?document_id=${docId}`);
+  
+  // 更新实体列表
+  const list = document.getElementById('entityList');
+  
+  // 添加筛选提示
+  let html = `<div class="doc-filter-banner" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin-bottom:8px;background:var(--blue-light,#eff6ff);border-radius:6px;font-size:12px">
+    <span>📄 ${docName} (${entities.length} 个实体)</span>
+    <button class="btn btn-sm" onclick="clearDocumentFilter()" style="padding:2px 8px;font-size:11px">✕ 清除筛选</button>
+  </div>`;
+  
+  if (entities.length === 0) {
+    html += '<div class="empty-state"><p>该文档暂无实体</p></div>';
+  } else {
+    html += entities.map(n => `
+      <div class="entity-item" onclick="selectNode(graphData.nodes.find(node => node.name === '${n.name}'))">
+        <div class="entity-dot" style="background:${typeColors[n.entity_type] || '#64748b'};color:${typeColors[n.entity_type] || '#64748b'}"></div>
+        <div class="entity-info">
+          <div class="entity-name">${n.name}</div>
+          <div class="entity-type">${typeLabels[n.entity_type] || n.entity_type}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  list.innerHTML = html;
+}
+
+function clearDocumentFilter() {
+  currentDocFilter = null;
+  updateEntityList();
 }
 
 function updateRelationList() {
@@ -1189,6 +1415,7 @@ function updateDocumentList() {
         <span>${d.created_at || ''}</span>
       </div>
       <div class="doc-actions">
+        <button class="btn btn-sm" onclick="event.stopPropagation();filterByDocument('${d.id}','${d.filename}')" title="查看此文档的实体">查看实体</button>
         <button class="btn btn-sm" onclick="event.stopPropagation();reviewDocument('${d.id}')">审核</button>
         <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteDocument('${d.id}')">删除</button>
       </div>
@@ -1296,7 +1523,7 @@ function initSearch() {
     
     results.innerHTML = matches.map(n => `
       <div class="search-result-item" onclick="selectSearchResult('${n.id}')">
-        <div class="entity-dot" style="background:${typeColors[n.type]}"></div>
+        <div class="entity-dot" style="background:${typeColors[n.type]};color:${typeColors[n.type]}"></div>
         <div>
           <div style="font-size:13px">${n.name}</div>
           <div style="font-size:11px;color:var(--text-muted)">${typeLabels[n.type] || n.type}</div>
@@ -1429,8 +1656,18 @@ async function deleteRelation() {
 // ============================================================
 async function reviewDocument(docId) {
   const doc = documents.find(d => d.id === docId);
-  if (doc) {
-    showReviewModal(doc);
+  if (!doc) return;
+  
+  // 从 API 获取该文档的实体和关系
+  try {
+    const [entities, relations] = await Promise.all([
+      API.get(`/api/entities?document_id=${docId}`),
+      API.get(`/api/relations?document_id=${docId}`)
+    ]);
+    showReviewModal({ ...doc, entities, relations });
+  } catch (e) {
+    console.error('获取文档数据失败:', e);
+    showReviewModal({ ...doc, entities: [], relations: [] });
   }
 }
 
@@ -1448,6 +1685,87 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('visible');
   editingEntity = null;
   editingRelation = null;
+}
+
+// ============================================================
+// Settings
+// ============================================================
+async function openSettings() {
+  const statusEl = document.getElementById('settingsStatus');
+  statusEl.style.display = 'none';
+  
+  try {
+    const cfg = await API.get('/api/settings/llm');
+    document.getElementById('cfgProvider').value = cfg.provider || 'deepseek';
+    document.getElementById('cfgApiKey').value = '';  // 不回填密钥
+    document.getElementById('cfgApiKey').placeholder = cfg.api_key_masked || '未设置';
+    document.getElementById('cfgBaseUrl').value = cfg.base_url || '';
+    document.getElementById('cfgModel').value = cfg.model || '';
+    document.getElementById('cfgTemp').value = cfg.temperature ?? 0.3;
+    document.getElementById('cfgMaxTokens').value = cfg.max_tokens ?? 4096;
+  } catch (e) {
+    console.error('加载配置失败:', e);
+  }
+  
+  document.getElementById('settingsModal').classList.add('visible');
+}
+
+async function saveSettings() {
+  const statusEl = document.getElementById('settingsStatus');
+  const data = {};
+  
+  const provider = document.getElementById('cfgProvider').value;
+  const apiKey = document.getElementById('cfgApiKey').value;
+  const baseUrl = document.getElementById('cfgBaseUrl').value;
+  const model = document.getElementById('cfgModel').value;
+  const temp = document.getElementById('cfgTemp').value;
+  const maxTokens = document.getElementById('cfgMaxTokens').value;
+  
+  data.provider = provider;
+  if (apiKey) data.api_key = apiKey;  // 只在填写时更新
+  if (baseUrl) data.base_url = baseUrl;
+  if (model) data.model = model;
+  if (temp) data.temperature = parseFloat(temp);
+  if (maxTokens) data.max_tokens = parseInt(maxTokens);
+  
+  try {
+    await API.put('/api/settings/llm', data);
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'var(--green-light)';
+    statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '配置已保存';
+    setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
+  } catch (e) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'var(--red-light, #fef2f2)';
+    statusEl.style.color = 'var(--red, #ef4444)';
+    statusEl.textContent = '保存失败: ' + e.message;
+  }
+}
+
+async function testLLM() {
+  const statusEl = document.getElementById('settingsStatus');
+  statusEl.style.display = 'block';
+  statusEl.style.background = 'var(--bg-tertiary)';
+  statusEl.style.color = 'var(--text-secondary)';
+  statusEl.textContent = '正在测试连接...';
+  
+  try {
+    const result = await API.post('/api/settings/llm/test');
+    if (result.success) {
+      statusEl.style.background = 'var(--green-light)';
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = '连接成功 ✓ ' + (result.message || '');
+    } else {
+      statusEl.style.background = 'var(--red-light, #fef2f2)';
+      statusEl.style.color = 'var(--red, #ef4444)';
+      statusEl.textContent = '连接失败: ' + (result.error || result.message || '未知错误');
+    }
+  } catch (e) {
+    statusEl.style.background = 'var(--red-light, #fef2f2)';
+    statusEl.style.color = 'var(--red, #ef4444)';
+    statusEl.textContent = '测试失败: ' + e.message;
+  }
 }
 
 // ============================================================

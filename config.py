@@ -91,6 +91,10 @@ def update_config(updates: dict):
     global _config
     if _config is None:
         _config = load_config()
+    # 防止脱敏值被写入 api_key
+    llm = updates.get("llm", {})
+    if llm.get("api_key") in ("***", "****", "未设置", ""):
+        llm.pop("api_key", None)
     _config = _deep_merge(_config, updates)
     save_config(_config)
     return _config

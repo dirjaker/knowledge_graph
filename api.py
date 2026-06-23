@@ -175,11 +175,29 @@ async def ingest_confirm(request: ConfirmImportRequest):
     imported_e = 0
     imported_r = 0
 
+    # 导入真实文档时，自动清除示例数据
+    db.clear_demo_data()
+
+    # 先创建文档记录，获取 document_id
+    task = db.get_ingest_task(request.task_id)
+    title = "文本导入"
+    file_path = ""
+    if task:
+        if task.get("input_text"):
+            title = task["input_text"][:50]
+        if task.get("input_type") == "file":
+            # 从 input_text 推断文件名（如果是文件上传）
+            title = task.get("filename", title)
+    doc_id = db.add_document(title=title, content="",
+                    entity_count=len(request.entities),
+                    relation_count=len(request.relations))
+
     for e in request.entities:
         db.add_entity(
             name=e.get("name", ""),
             entity_type=e.get("type", "other"),
             description=e.get("description", ""),
+            source_doc_ids=[doc_id],
         )
         imported_e += 1
 
@@ -189,20 +207,14 @@ async def ingest_confirm(request: ConfirmImportRequest):
             target=r.get("target", ""),
             relation_type=r.get("type", "related_to"),
             evidence=r.get("evidence", ""),
+            source_doc_ids=[doc_id],
         )
         imported_r += 1
-
-    # 记录文档
-    task = db.get_ingest_task(request.task_id)
-    title = "文本导入"
-    if task and task.get("input_text"):
-        title = task["input_text"][:50]
-    db.add_document(title=title, content="",
-                    entity_count=imported_e, relation_count=imported_r)
 
     return {
         "imported_entities": imported_e,
         "imported_relations": imported_r,
+        "document_id": doc_id,
     }
 
 
@@ -228,7 +240,7 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(400, f"文件解析失败: {e}")
 
     # 创建任务
-    task_id = db.create_ingest_task("file", text)
+    task_id = db.create_ingest_task("file", text, filename=file.filename or "")
 
     def _process():
         try:
@@ -248,6 +260,15 @@ async def upload_document(file: UploadFile = File(...)):
     return {"task_id": task_id, "filename": file.filename, "status": "processing"}
 
 
+@app.get("/api/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """查询任务状态（前端轮询用）"""
+    task = db.get_ingest_task(task_id)
+    if not task:
+        raise HTTPException(404, "任务不存在")
+    return task
+
+
 # ============================================================
 # 实体 API
 # ============================================================
@@ -256,11 +277,12 @@ async def upload_document(file: UploadFile = File(...)):
 async def list_entities(
     keyword: str = "",
     entity_type: str = "",
+    document_id: str = "",
     limit: int = 100,
     offset: int = 0,
 ):
-    """列出/搜索实体"""
-    return db.search_entities(keyword, entity_type, limit, offset)
+    """列出/搜索实体，支持按文档ID筛选"""
+    return db.search_entities(keyword, entity_type, document_id, limit, offset)
 
 
 @app.get("/api/entities/{name}")
@@ -313,10 +335,11 @@ async def delete_entity(name: str):
 async def list_relations(
     entity: str = "",
     relation_type: str = "",
+    document_id: str = "",
     limit: int = 200,
 ):
-    """列出关系"""
-    return db.get_relations(entity, relation_type, limit)
+    """列出关系，支持按文档ID筛选"""
+    return db.get_relations(entity, relation_type, document_id, limit)
 
 
 @app.post("/api/relations")
@@ -493,14 +516,15 @@ async def get_algorithm_stats():
 
 @app.get("/api/settings/llm")
 async def get_llm_settings():
-    """获取LLM配置"""
-    cfg = get_llm_config()
-    # 隐藏API Key
-    if cfg.get("api_key"):
-        key = cfg["api_key"]
+    """获取LLM配置（不暴露真实 API Key）"""
+    import copy
+    cfg = copy.deepcopy(get_llm_config())
+    key = cfg.pop("api_key", "")
+    if key:
         cfg["api_key_masked"] = key[:6] + "****" + key[-4:] if len(key) > 10 else "****"
     else:
         cfg["api_key_masked"] = ""
+    cfg["has_key"] = bool(key)
     return cfg
 
 
@@ -629,7 +653,7 @@ async def load_demo():
         ("机器学习", "concept", "ML算法"),
     ]
     for name, etype, desc in demo_entities:
-        db.add_entity(name, etype, desc)
+        db.add_entity(name, etype, desc, source_doc_ids=["demo"])
     
     demo_relations = [
         ("张三", "阿里巴巴", "任职于"),
@@ -646,7 +670,7 @@ async def load_demo():
         ("人工智能", "机器学习", "包含"),
     ]
     for src, tgt, rtype in demo_relations:
-        db.add_relation(src, tgt, rtype)
+        db.add_relation(src, tgt, rtype, source_doc_ids=["demo"])
     
     return {"entities_loaded": len(demo_entities), "relations_loaded": len(demo_relations)}
 

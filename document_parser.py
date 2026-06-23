@@ -91,8 +91,9 @@ class DocumentParser:
             doc.close()
             return text
         except ImportError:
-            # 如果没有 pymupdf，返回提示
             return f"[PDF 文件: {path.name}，需要安装 pymupdf: pip install pymupdf]"
+        except Exception as e:
+            return f"[PDF 文件解析失败: {path.name}，错误: {e}]"
 
     @staticmethod
     def _read_word(path: Path) -> str:
@@ -103,6 +104,8 @@ class DocumentParser:
             return "\n".join([p.text for p in doc.paragraphs])
         except ImportError:
             return f"[Word 文件: {path.name}，需要安装 python-docx: pip install python-docx]"
+        except Exception as e:
+            return f"[Word 文件解析失败: {path.name}，错误: {e}]"
 
     @staticmethod
     def _clean_text(text: str) -> str:
