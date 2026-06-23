@@ -1,1474 +1,996 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>知识图谱系统</title>
-<link rel="stylesheet" href="/static/css/style.css">
+<title>知识图谱</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
-/* Tooltip */
-.tooltip {
-  position: fixed;
-  padding: 6px 10px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-primary);
-  border-radius: 6px;
-  font-size: 11px;
-  color: var(--text-primary);
-  pointer-events: none;
-  z-index: 999;
-  box-shadow: var(--shadow-md);
-  max-width: 300px;
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-primary:#0a0a0f;
+  --bg-secondary:#12121a;
+  --bg-tertiary:#1a1a25;
+  --bg-elevated:#222230;
+  --border:#2a2a3a;
+  --border-subtle:#1e1e2e;
+  --text-primary:#e8e8ed;
+  --text-secondary:#8888a0;
+  --text-muted:#555570;
+  --accent:#6366f1;
+  --accent-hover:#818cf8;
+  --accent-muted:rgba(99,102,241,0.15);
+  --green:#22c55e;
+  --green-muted:rgba(34,197,94,0.15);
+  --red:#ef4444;
+  --red-muted:rgba(239,68,68,0.15);
+  --yellow:#eab308;
+  --yellow-muted:rgba(234,179,8,0.15);
+  --cyan:#06b6d4;
+  --cyan-muted:rgba(6,182,212,0.15);
+  --purple:#a855f7;
+  --purple-muted:rgba(168,85,247,0.15);
+  --orange:#f97316;
+  --orange-muted:rgba(249,115,22,0.15);
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+  --radius:10px;
+  --radius-sm:6px;
+  --transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
 }
-.tooltip .tip-type { color: var(--text-secondary); font-size: 10px; }
-.tooltip .tip-desc { color: var(--text-secondary); margin-top: 2px; font-size: 10px; }
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow:hidden}
 
-/* Graph node/edge highlight */
-.node-highlight { filter: brightness(1.3); }
-.node-dimmed { opacity: 0.15; }
-.edge-highlight { stroke-opacity: 0.8 !important; }
-.edge-dimmed { stroke-opacity: 0.05 !important; }
+/* Layout */
+.app{display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:56px 1fr;height:100vh}
+.header{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100}
+.left-panel{background:var(--bg-secondary);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.center{position:relative;overflow:hidden}
+.right-panel{background:var(--bg-secondary);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.3s ease}
+.right-panel.open{transform:translateX(0)}
 
-/* Structured query form */
-.structured-form { margin-top: 16px; padding: 16px; background: var(--bg-tertiary); border-radius: 8px; }
-.structured-form .form-group { margin-bottom: 12px; }
-.structured-form .form-group label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+/* Header */
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--accent)}
+.logo svg{width:24px;height:24px}
+.header-center{flex:1;display:flex;justify-content:center}
+.search-global{width:400px;position:relative}
+.search-global input{width:100%;padding:8px 12px 8px 36px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;outline:none;transition:var(--transition)}
+.search-global input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-muted)}
+.search-global svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)}
+.header-actions{display:flex;gap:8px}
 
-/* Community tags */
-.community-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; margin: 2px; background: var(--bg-tertiary); color: var(--text-primary); }
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-tertiary);color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;transition:var(--transition);white-space:nowrap}
+.btn:hover{background:var(--bg-elevated);border-color:var(--text-muted)}
+.btn-icon{padding:7px;border:none;background:transparent;color:var(--text-secondary)}
+.btn-icon:hover{color:var(--text-primary);background:var(--bg-tertiary)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-ghost{background:transparent;border-color:transparent}
+.btn-ghost:hover{background:var(--bg-tertiary)}
+.btn-sm{padding:5px 10px;font-size:12px}
 
-/* Path highlight */
-.path-highlight { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 4px; font-size: 12px; flex-wrap: wrap; }
-.path-node { color: var(--accent); font-weight: 600; }
-.path-edge { color: var(--text-secondary); font-size: 11px; }
+/* Stats Bar */
+.stats-bar{display:flex;gap:1px;background:var(--border-subtle);border-bottom:1px solid var(--border)}
+.stat{flex:1;padding:12px 16px;background:var(--bg-secondary);text-align:center}
+.stat-value{font-size:20px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:11px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg-secondary)}
+.tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;transition:var(--transition)}
+.tab:hover{color:var(--text-secondary)}
+.tab.active{color:var(--accent);border-color:var(--accent)}
+.tab-content{flex:1;overflow-y:auto;display:none}
+.tab-content.active{display:block}
+
+/* Entity List */
+.entity-list{padding:8px}
+.entity-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);margin-bottom:2px}
+.entity-item:hover{background:var(--bg-tertiary)}
+.entity-item.active{background:var(--accent-muted)}
+.entity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.entity-info{flex:1;min-width:0}
+.entity-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entity-type{font-size:11px;color:var(--text-muted)}
+.entity-count{font-size:11px;color:var(--text-muted);background:var(--bg-tertiary);padding:2px 6px;border-radius:4px}
+
+/* Relation List */
+.relation-list{padding:8px}
+.relation-item{padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);margin-bottom:2px}
+.relation-item:hover{background:var(--bg-tertiary)}
+.relation-header{display:flex;align-items:center;gap:8px;font-size:13px}
+.relation-arrow{color:var(--text-muted);font-size:11px}
+.relation-type{font-size:11px;color:var(--accent);background:var(--accent-muted);padding:2px 6px;border-radius:4px}
+
+/* Import Panel */
+.import-panel{padding:16px}
+.import-textarea{width:100%;min-height:200px;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;font-family:inherit;resize:vertical;outline:none;transition:var(--transition)}
+.import-textarea:focus{border-color:var(--accent)}
+.import-actions{display:flex;gap:8px;margin-top:12px}
+
+/* Graph Container */
+.graph-container{width:100%;height:100%;background:var(--bg-primary)}
+.graph-container svg{width:100%;height:100%}
+
+/* Graph Controls */
+.graph-controls{position:absolute;bottom:20px;right:20px;display:flex;flex-direction:column;gap:4px}
+.graph-controls .btn{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center}
+
+/* Graph Info */
+.graph-info{position:absolute;top:16px;left:16px;display:flex;gap:8px}
+.info-badge{padding:6px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);backdrop-filter:blur(10px)}
+
+/* Layout Selector */
+.layout-selector{position:absolute;top:16px;right:16px}
+.layout-selector select{padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;cursor:pointer}
+
+/* Detail Panel */
+.detail-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.detail-title{font-size:15px;font-weight:600}
+.detail-close{cursor:pointer;color:var(--text-muted);transition:var(--transition)}
+.detail-close:hover{color:var(--text-primary)}
+.detail-content{flex:1;overflow-y:auto;padding:16px 20px}
+.detail-section{margin-bottom:20px}
+.detail-section-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-subtle)}
+.detail-label{font-size:12px;color:var(--text-muted)}
+.detail-value{font-size:13px;font-weight:500}
+
+/* Connections */
+.connection-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition)}
+.connection-item:hover{background:var(--bg-tertiary)}
+.connection-dot{width:6px;height:6px;border-radius:50%}
+.connection-name{font-size:12px;flex:1}
+.connection-type{font-size:10px;color:var(--text-muted);background:var(--bg-tertiary);padding:2px 6px;border-radius:4px}
+
+/* Type Colors */
+.type-person{background:var(--red)}
+.type-organization{background:var(--accent)}
+.type-location{background:var(--green)}
+.type-technology{background:var(--yellow)}
+.type-concept{background:var(--purple)}
+.type-event{background:var(--cyan)}
+.type-product{background:var(--orange)}
+.type-other{background:var(--text-muted)}
+
+/* Tooltip */
+.tooltip{position:absolute;padding:8px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text-primary);pointer-events:none;opacity:0;transition:opacity 0.15s;z-index:1000;box-shadow:var(--shadow)}
+.tooltip.visible{opacity:1}
+
+/* Empty State */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted)}
+.empty-state svg{width:48px;height:48px;margin-bottom:16px;opacity:0.5}
+.empty-state p{font-size:13px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* Animation */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.2s ease}
+
+/* Search Results */
+.search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:4px;max-height:300px;overflow-y:auto;display:none;box-shadow:var(--shadow)}
+.search-results.visible{display:block}
+.search-result-item{padding:10px 12px;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:10px}
+.search-result-item:hover{background:var(--bg-tertiary)}
 </style>
 </head>
 <body>
-<div id="app" class="app-layout">
-  <!-- 左侧导航栏 -->
-  <nav class="nav-rail">
-    <div class="nav-logo">KG</div>
-    <div class="nav-items">
-      <div class="nav-item" :class="{active: page==='graph'}" @click="page='graph'" title="图谱">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/><line x1="6" y1="6" x2="10" y2="10"/><line x1="18" y1="6" x2="14" y2="10"/><line x1="6" y1="18" x2="10" y2="14"/><line x1="18" y1="18" x2="14" y2="14"/></svg>
-      </div>
-      <div class="nav-item" :class="{active: page==='import'}" @click="page='import'" title="导入">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      </div>
-      <div class="nav-item" :class="{active: page==='query'}" @click="page='query'" title="查询">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      </div>
-      <div class="nav-item" :class="{active: page==='analysis'}" @click="page='analysis'" title="分析">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <circle cx="4" cy="6" r="2"/>
+        <circle cx="20" cy="6" r="2"/>
+        <circle cx="4" cy="18" r="2"/>
+        <circle cx="20" cy="18" r="2"/>
+        <line x1="9.5" y1="10" x2="5.5" y2="7.5"/>
+        <line x1="14.5" y1="10" x2="18.5" y2="7.5"/>
+        <line x1="9.5" y1="14" x2="5.5" y2="16.5"/>
+        <line x1="14.5" y1="14" x2="18.5" y2="16.5"/>
+      </svg>
+      知识图谱
+    </div>
+    <div class="header-center">
+      <div class="search-global">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="搜索实体、关系..." id="globalSearch" autocomplete="off">
+        <div class="search-results" id="searchResults"></div>
       </div>
     </div>
-    <div class="nav-bottom">
-      <div class="nav-item" :class="{active: page==='settings'}" @click="page='settings'" title="设置">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <div class="header-actions">
+      <button class="btn btn-sm" onclick="loadDemo()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+        </svg>
+        示例数据
+      </button>
+      <button class="btn btn-sm btn-icon" onclick="clearGraph()" title="清空图谱">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Left Panel -->
+  <div class="left-panel">
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value" id="statNodes">0</div>
+        <div class="stat-label">节点</div>
       </div>
-      <div class="nav-item" @click="cycleTheme" title="切换主题">
-        <svg v-if="theme==='dark'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-        <svg v-else-if="theme==='light'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      <div class="stat">
+        <div class="stat-value" id="statEdges">0</div>
+        <div class="stat-label">边</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statComponents">0</div>
+        <div class="stat-label">连通分量</div>
       </div>
     </div>
-  </nav>
 
-  <!-- 主内容区 -->
-  <div class="main-content">
-    <!-- ============ 图谱页面 ============ -->
-    <template v-if="page==='graph'">
-      <div class="toolbar">
-        <div class="toolbar-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><line x1="6" y1="6" x2="10" y2="10"/><line x1="18" y1="6" x2="14" y2="10"/></svg>
-          知识图谱
-        </div>
-        <input class="input" style="width:260px" placeholder="搜索实体..." v-model="graphSearch" @keyup.enter="searchGraphNodes">
-        <select class="select" v-model="graphTypeFilter" @change="loadGraphData">
-          <option value="">全部类型</option>
-          <option value="person">人物</option>
-          <option value="organization">组织</option>
-          <option value="location">地点</option>
-          <option value="technology">技术</option>
-          <option value="concept">概念</option>
-          <option value="event">事件</option>
-          <option value="product">产品</option>
-        </select>
-        <select class="select" v-model="graphLayout" @change="relayoutGraph">
-          <option value="force">力导向</option>
-          <option value="circular">环形</option>
-          <option value="grid">网格</option>
-        </select>
-        <button class="btn btn-secondary btn-sm" @click="resetGraph">重置视图</button>
-        <div class="toolbar-spacer"></div>
-        <span style="font-size:11px;color:var(--text-tertiary)">
-          节点 <span style="color:var(--text-primary);font-weight:600">{{graphStats.nodeCount}}</span>
-          &nbsp;|&nbsp;
-          边 <span style="color:var(--text-primary);font-weight:600">{{graphStats.edgeCount}}</span>
-        </span>
-      </div>
-      <div class="graph-layout">
-        <!-- 左侧实体列表 -->
-        <div class="entity-sidebar">
-          <div class="entity-sidebar-header">
-            <input class="input" placeholder="过滤实体..." v-model="entityFilter" @input="filterEntities">
-            <div class="type-filters">
-              <span class="type-filter" :class="{active: entityTypeFilter===''}" @click="entityTypeFilter='';filterEntities()">全部</span>
-              <span class="type-filter" v-for="t in entityTypes" :key="t.value" :class="{active: entityTypeFilter===t.value}" :style="{borderLeftColor: t.color, borderLeftWidth: '3px'}" @click="entityTypeFilter=t.value;filterEntities()">{{t.label}}</span>
-            </div>
-          </div>
-          <div class="entity-count">显示 <strong>{{filteredEntities.length}}</strong> 个实体</div>
-          <div class="entity-list">
-            <div class="entity-item" v-for="e in filteredEntities" :key="e.name" :class="{active: selectedEntity&&selectedEntity.name===e.name}" @click="selectEntity(e)">
-              <span class="entity-dot" :style="{background: getTypeColor(e.entity_type)}"></span>
-              <div class="entity-info">
-                <div class="entity-name">{{e.name}}</div>
-                <div class="entity-meta">{{getTypeLabel(e.entity_type)}}</div>
-              </div>
-            </div>
-            <div v-if="filteredEntities.length===0" class="empty-state" style="padding:24px">
-              <p>暂无实体</p>
-            </div>
-          </div>
-        </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="entities" onclick="switchTab(this)">实体</div>
+      <div class="tab" data-tab="relations" onclick="switchTab(this)">关系</div>
+      <div class="tab" data-tab="import" onclick="switchTab(this)">导入</div>
+    </div>
 
-        <!-- 图谱画布 -->
-        <div class="graph-canvas-wrapper" ref="graphCanvas">
-          <svg ref="graphSvg"></svg>
-          <div class="graph-controls">
-            <button class="btn btn-ghost btn-icon btn-sm" @click="zoomIn" title="放大">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-            <button class="btn btn-ghost btn-icon btn-sm" @click="zoomOut" title="缩小">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-            <button class="btn btn-ghost btn-icon btn-sm" @click="fitGraph" title="适应">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-            </button>
-          </div>
-          <div class="graph-status">
-            缩放: <span>{{Math.round(graphZoom*100)}}%</span>
-          </div>
-        </div>
-
-        <!-- 右侧详情面板 -->
-        <div class="detail-panel" :class="{collapsed: !selectedEntity}">
-          <template v-if="selectedEntity">
-            <div class="detail-header">
-              <div>
-                <div class="detail-title">{{selectedEntity.name}}</div>
-                <span class="badge" :class="'badge-'+selectedEntity.entity_type" style="margin-top:4px">{{getTypeLabel(selectedEntity.entity_type)}}</span>
-              </div>
-              <button class="btn btn-ghost btn-icon btn-sm" @click="selectedEntity=null">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </div>
-            <div class="detail-body">
-              <div class="detail-section" v-if="selectedEntity.description">
-                <div class="detail-section-title">描述</div>
-                <p style="font-size:12px;color:var(--text-primary);line-height:1.6">{{selectedEntity.description}}</p>
-              </div>
-              <div class="detail-section">
-                <div class="detail-section-title">属性</div>
-                <div class="detail-row"><span class="detail-label">置信度</span><span class="detail-value">{{selectedEntity.confidence}}</span></div>
-                <div class="detail-row"><span class="detail-label">创建时间</span><span class="detail-value">{{selectedEntity.created_at}}</span></div>
-              </div>
-              <div class="detail-section">
-                <div class="detail-section-title">关系 ({{entityRelations.length}})</div>
-                <div class="relation-item" v-for="r in entityRelations" :key="r.id" @click="highlightRelation(r)">
-                  <span class="relation-arrow" v-if="r.source===selectedEntity.name">→</span>
-                  <span class="relation-arrow" v-else>←</span>
-                  <span>{{r.source===selectedEntity.name ? r.target : r.source}}</span>
-                  <span style="color:var(--text-tertiary);font-size:10px">[{{r.type}}]</span>
-                </div>
-                <div v-if="entityRelations.length===0" style="font-size:12px;color:var(--text-tertiary)">暂无关系</div>
-              </div>
-            </div>
-            <div class="detail-actions">
-              <button class="btn btn-secondary btn-sm" @click="expandNeighbors">展开邻居</button>
-              <button class="btn btn-danger btn-sm" @click="deleteSelectedEntity">删除</button>
-            </div>
-          </template>
+    <div id="tab-entities" class="tab-content active">
+      <div class="entity-list" id="entityList">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+          </svg>
+          <p>暂无实体数据</p>
         </div>
       </div>
-    </template>
+    </div>
 
-    <!-- ============ 导入页面 ============ -->
-    <template v-if="page==='import'">
-      <div class="toolbar">
-        <div class="toolbar-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          数据导入
+    <div id="tab-relations" class="tab-content">
+      <div class="relation-list" id="relationList">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+          </svg>
+          <p>暂无关系数据</p>
         </div>
       </div>
-      <div class="page-content">
-        <div class="import-layout">
-          <div class="import-tabs">
-            <div class="import-tab" :class="{active: importTab==='text'}" @click="importTab='text'">文本粘贴</div>
-            <div class="import-tab" :class="{active: importTab==='file'}" @click="importTab='file'">文件上传</div>
-            <div class="import-tab" :class="{active: importTab==='manual'}" @click="importTab='manual'">手动添加</div>
-          </div>
+    </div>
 
-          <!-- 文本粘贴 -->
-          <div v-if="importTab==='text'">
-            <textarea class="text-input-area" v-model="importText" placeholder="粘贴或输入文本内容...&#10;&#10;支持新闻文章、论文摘要、技术文档等，系统将自动识别并提取其中的实体和关系。"></textarea>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
-              <span style="font-size:11px;color:var(--text-tertiary)">建议不超过5000字以获得最佳效果</span>
-              <button class="btn btn-primary" @click="startIngest" :disabled="!importText.trim()||importLoading">
-                <span class="spinner" v-if="importLoading"></span>
-                {{importLoading ? '分析中...' : '开始分析'}}
-              </button>
-            </div>
-          </div>
-
-          <!-- 文件上传 -->
-          <div v-if="importTab==='file'">
-            <div class="upload-zone" @click="$refs.fileInput.click()" @dragover.prevent @drop.prevent="handleFileDrop">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <p style="color:var(--text-secondary)">拖拽文件到此处或点击上传</p>
-              <p style="font-size:11px;color:var(--text-tertiary);margin-top:8px">支持 TXT、Markdown、PDF、Word</p>
-            </div>
-            <input type="file" ref="fileInput" style="display:none" accept=".txt,.md,.pdf,.doc,.docx" @change="handleFileSelect">
-          </div>
-
-          <!-- 手动添加 -->
-          <div v-if="importTab==='manual'">
-            <div class="card" style="margin-bottom:16px">
-              <div class="card-header"><span class="card-title">添加实体</span></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
-                <div><label class="form-label">名称</label><input class="input" v-model="manualEntity.name" placeholder="实体名称"></div>
-                <div><label class="form-label">类型</label>
-                  <select class="select" v-model="manualEntity.entity_type">
-                    <option v-for="t in entityTypes" :value="t.value">{{t.label}}</option>
-                  </select>
-                </div>
-                <div><label class="form-label">描述</label><input class="input" v-model="manualEntity.description" placeholder="可选"></div>
-                <button class="btn btn-primary" @click="addManualEntity" style="align-self:end">添加</button>
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-header"><span class="card-title">添加关系</span></div>
-              <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
-                <div><label class="form-label">源实体</label><input class="input" v-model="manualRelation.source" placeholder="源实体名称" list="entity-names"></div>
-                <div><label class="form-label">目标实体</label><input class="input" v-model="manualRelation.target" placeholder="目标实体名称" list="entity-names"></div>
-                <div><label class="form-label">关系类型</label>
-                  <select class="select" v-model="manualRelation.relation_type">
-                    <option value="related_to">相关</option><option value="works_at">工作于</option><option value="located_in">位于</option>
-                    <option value="part_of">属于</option><option value="created">创造了</option><option value="uses">使用</option>
-                    <option value="founded">创立了</option><option value="invested_in">投资了</option><option value="other">其他</option>
-                  </select>
-                </div>
-                <button class="btn btn-primary" @click="addManualRelation" style="align-self:end">添加</button>
-              </div>
-            </div>
-            <datalist id="entity-names"><option v-for="e in allEntities" :value="e.name"></datalist>
-          </div>
-
-          <!-- 分析结果预览 -->
-          <div v-if="ingestResult" class="preview-section">
-            <div class="card">
-              <div class="card-header">
-                <span class="card-title">分析结果预览</span>
-                <button class="btn btn-ghost btn-sm" @click="ingestResult=null">清除</button>
-              </div>
-              <div v-if="ingestResult.entities&&ingestResult.entities.length">
-                <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">识别到的实体 ({{ingestResult.entities.length}})</h4>
-                <div style="margin-bottom:16px">
-                  <span class="preview-entity" v-for="(e,i) in ingestResult.entities" :key="i">
-                    <span class="entity-dot" :style="{background: getTypeColor(e.type)}"></span>
-                    {{e.name}} <span style="color:var(--text-tertiary);font-size:10px">{{e.type}}</span>
-                  </span>
-                </div>
-              </div>
-              <div v-if="ingestResult.relations&&ingestResult.relations.length">
-                <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">识别到的关系 ({{ingestResult.relations.length}})</h4>
-                <div class="preview-relation" v-for="(r,i) in ingestResult.relations" :key="i">
-                  <span style="color:var(--accent);font-weight:600">{{r.source}}</span>
-                  <span style="color:var(--text-tertiary)">—[{{r.type}}]→</span>
-                  <span style="color:var(--accent);font-weight:600">{{r.target}}</span>
-                  <span v-if="r.evidence" style="color:var(--text-tertiary);font-size:10px;margin-left:auto">{{r.evidence}}</span>
-                </div>
-              </div>
-              <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-                <button class="btn btn-primary" @click="confirmImport">确认导入图谱</button>
-              </div>
-            </div>
-          </div>
+    <div id="tab-import" class="tab-content">
+      <div class="import-panel">
+        <textarea class="import-textarea" id="importText" placeholder="输入文本，系统将自动提取实体和关系..."></textarea>
+        <div class="import-actions">
+          <button class="btn btn-primary" onclick="importText()" style="flex:1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            导入
+          </button>
         </div>
-      </div>
-    </template>
-
-    <!-- ============ 查询页面 ============ -->
-    <template v-if="page==='query'">
-      <div class="toolbar">
-        <div class="toolbar-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          智能查询
-        </div>
-        <div class="toolbar-spacer"></div>
-        <button class="btn btn-secondary btn-sm" @click="queryMessages=[]">清空对话</button>
-      </div>
-      <div class="query-layout">
-        <div class="query-main">
-          <div class="query-messages" ref="queryMessagesEl">
-            <div v-if="queryMessages.length===0" class="empty-state">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <p>输入问题开始查询知识图谱</p>
-              <p style="font-size:11px;margin-top:4px">例如：张三和李四什么关系？</p>
-            </div>
-            <div v-for="msg in queryMessages" :key="msg.id" class="query-message" :class="msg.role">
-              <div class="query-avatar">{{msg.role==='user'?'我':'AI'}}</div>
-              <div class="query-bubble" v-html="msg.content"></div>
-            </div>
-            <div v-if="queryLoading" class="query-message ai">
-              <div class="query-avatar">AI</div>
-              <div class="query-bubble"><span class="spinner"></span> 思考中...</div>
-            </div>
-          </div>
-          <div class="query-suggestions">
-            <span class="suggestion-chip" @click="setQuery('图谱中有哪些实体类型？')">图谱中有哪些实体类型？</span>
-            <span class="suggestion-chip" @click="setQuery('哪个实体的关系最多？')">哪个实体的关系最多？</span>
-            <span class="suggestion-chip" @click="setQuery('请总结图谱中的主要信息')">请总结图谱中的主要信息</span>
-          </div>
-          <div class="query-input-bar">
-            <input class="input" v-model="queryInput" placeholder="输入问题..." @keyup.enter="sendQuery">
-            <button class="btn btn-primary" @click="sendQuery" :disabled="!queryInput.trim()||queryLoading">发送</button>
-          </div>
-        </div>
-        <div class="query-sidebar">
-          <h3 style="font-size:13px;font-weight:600;margin-bottom:12px">查询历史</h3>
-          <div v-if="queryHistory.length===0" style="font-size:12px;color:var(--text-tertiary)">暂无历史</div>
-          <div class="query-history-item" v-for="(h,i) in queryHistory" :key="i" @click="queryInput=h.question;sendQuery()">
-            <div class="query-history-q">{{h.question}}</div>
-            <div class="query-history-meta">{{h.time}}</div>
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <!-- ============ 分析页面 ============ -->
-    <template v-if="page==='analysis'">
-      <div class="toolbar">
-        <div class="toolbar-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          图谱分析
-        </div>
-        <div class="toolbar-spacer"></div>
-        <button class="btn btn-secondary btn-sm" @click="loadAnalysis">刷新</button>
-      </div>
-      <div class="page-content">
-        <div class="analysis-layout">
-          <!-- 指标卡片 -->
-          <div class="stats-cards">
-            <div class="stat-card">
-              <div class="stat-card-icon" style="background:var(--accent-bg);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3"/></svg></div>
-              <div class="stat-card-value">{{analysisStats.entity_count||0}}</div>
-              <div class="stat-card-label">实体总数</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-icon" style="background:var(--success-bg);color:var(--success)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
-              <div class="stat-card-value">{{analysisStats.relation_count||0}}</div>
-              <div class="stat-card-label">关系总数</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-icon" style="background:var(--warning-bg);color:var(--warning)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg></div>
-              <div class="stat-card-value">{{analysisStats.document_count||0}}</div>
-              <div class="stat-card-label">文档数</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-icon" style="background:var(--error-bg);color:var(--error)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-              <div class="stat-card-value">{{analysisStats.avg_degree||0}}</div>
-              <div class="stat-card-label">平均度数</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-card-icon" style="background:var(--accent-bg);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></div>
-              <div class="stat-card-value">{{Object.keys(analysisStats.entity_types||{}).length}}</div>
-              <div class="stat-card-label">实体类型数</div>
-            </div>
-          </div>
-
-          <!-- 图表区域 -->
-          <div class="charts-grid">
-            <div class="chart-card">
-              <div class="chart-title">实体类型分布</div>
-              <div ref="entityTypeChart" style="height:200px"></div>
-            </div>
-            <div class="chart-card">
-              <div class="chart-title">关系类型分布</div>
-              <div ref="relationTypeChart" style="height:200px"></div>
-            </div>
-            <div class="chart-card">
-              <div class="chart-title">连接数 Top 10</div>
-              <div ref="topNodesChart" style="height:200px"></div>
-            </div>
-          </div>
-
-          <!-- 底部：社区 + 中心性 -->
-          <div class="bottom-grid">
-            <div class="card">
-              <div class="card-header"><span class="card-title">社区检测</span></div>
-              <div v-if="communities.length===0" style="font-size:12px;color:var(--text-tertiary)">数据不足，需要更多实体和关系</div>
-              <div v-for="(c,i) in communities" :key="i" style="margin-bottom:12px">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <span class="badge" style="background:var(--accent-bg);color:var(--accent)">社区 {{i+1}}</span>
-                  <span style="font-size:11px;color:var(--text-secondary)">{{c.size}} 个节点</span>
-                </div>
-                <div>
-                  <span class="community-tag" v-for="n in c.nodes.slice(0,8)" :key="n">{{n}}</span>
-                  <span v-if="c.nodes.length>8" class="community-tag" style="color:var(--text-tertiary)">+{{c.nodes.length-8}} 更多</span>
-                </div>
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-header"><span class="card-title">中心性分析 Top 10</span></div>
-              <div class="table-wrapper">
-                <table>
-                  <thead><tr><th>#</th><th>名称</th><th>度中心性</th><th>介数中心性</th><th>PageRank</th></tr></thead>
-                  <tbody>
-                    <tr v-for="(n,i) in centralityData" :key="i">
-                      <td>{{i+1}}</td>
-                      <td style="color:var(--accent);cursor:pointer" @click="page='graph';$nextTick(()=>focusNode(n.name))">{{n.name}}</td>
-                      <td>{{n.degree||n.centrality||'-'}}</td>
-                      <td>{{n.betweenness||'-'}}</td>
-                      <td>{{n.score||'-'}}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <!-- ============ 设置页面 ============ -->
-    <template v-if="page==='settings'">
-      <div class="toolbar">
-        <div class="toolbar-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-          设置
-        </div>
-      </div>
-      <div class="page-content">
-        <div class="settings-layout">
-          <div class="settings-nav">
-            <div class="settings-nav-item" :class="{active: settingsTab==='llm'}" @click="settingsTab='llm'">LLM 配置</div>
-            <div class="settings-nav-item" :class="{active: settingsTab==='graph'}" @click="settingsTab='graph';loadDatabaseInfo()">图谱管理</div>
-            <div class="settings-nav-item" :class="{active: settingsTab==='entities'}" @click="settingsTab='entities';loadSettingsEntities()">实体管理</div>
-            <div class="settings-nav-item" :class="{active: settingsTab==='relations'}" @click="settingsTab='relations';loadSettingsRelations()">关系管理</div>
-          </div>
-          <div class="settings-content">
-            <!-- LLM配置 -->
-            <div v-if="settingsTab==='llm'" class="settings-section">
-              <h2 style="font-size:16px;font-weight:600;margin-bottom:20px">LLM 配置</h2>
-              <div class="form-label">模型提供商</div>
-              <div class="provider-cards">
-                <div class="provider-card" :class="{active: llmConfig.provider==='deepseek'}" @click="llmConfig.provider='deepseek'">
-                  <h4>DeepSeek</h4>
-                  <p>云端 API 推理服务</p>
-                </div>
-                <div class="provider-card" :class="{active: llmConfig.provider==='ollama'}" @click="llmConfig.provider='ollama'">
-                  <h4>Ollama</h4>
-                  <p>本地模型推理服务</p>
-                </div>
-              </div>
-              <div class="form-group" v-if="llmConfig.provider==='deepseek'">
-                <label class="form-label">API Key</label>
-                <input class="input" type="password" v-model="llmConfig.api_key" placeholder="sk-...">
-              </div>
-              <div class="form-group">
-                <label class="form-label">模型名称</label>
-                <input class="input" v-model="llmConfig.model" placeholder="deepseek-chat">
-              </div>
-              <div class="form-group" v-if="llmConfig.provider==='deepseek'">
-                <label class="form-label">Base URL</label>
-                <input class="input" v-model="llmConfig.base_url" placeholder="https://api.deepseek.com">
-              </div>
-              <div class="form-group">
-                <label class="form-label">Temperature: {{llmConfig.temperature}}</label>
-                <input type="range" min="0" max="1" step="0.1" v-model.number="llmConfig.temperature" style="width:100%">
-              </div>
-              <div style="display:flex;gap:8px;margin-top:20px">
-                <button class="btn btn-secondary" @click="testLLMConnection">
-                  <span class="spinner" v-if="llmTesting"></span>
-                  {{llmTesting ? '测试中...' : '测试连接'}}
-                </button>
-                <button class="btn btn-primary" @click="saveLLMConfig">保存配置</button>
-              </div>
-              <div v-if="llmTestResult" style="margin-top:12px;padding:10px;border-radius:6px;font-size:12px" :style="{background: llmTestResult.success?'var(--success-bg)':'var(--error-bg)', color: llmTestResult.success?'var(--success)':'var(--error)'}">
-                {{llmTestResult.message}}
-              </div>
-            </div>
-
-            <!-- 图谱管理 -->
-            <div v-if="settingsTab==='graph'" class="settings-section">
-              <h2 style="font-size:16px;font-weight:600;margin-bottom:20px">图谱管理</h2>
-              <div class="stats-cards" style="grid-template-columns:repeat(2,1fr);margin-bottom:24px">
-                <div class="stat-card"><div class="stat-card-value">{{dbInfo.entity_count||0}}</div><div class="stat-card-label">实体</div></div>
-                <div class="stat-card"><div class="stat-card-value">{{dbInfo.relation_count||0}}</div><div class="stat-card-label">关系</div></div>
-                <div class="stat-card"><div class="stat-card-value">{{dbInfo.document_count||0}}</div><div class="stat-card-label">文档</div></div>
-                <div class="stat-card"><div class="stat-card-value">{{dbInfo.size_human||'0 B'}}</div><div class="stat-card-label">数据库大小</div></div>
-              </div>
-              <div style="display:flex;gap:8px;margin-bottom:24px">
-                <button class="btn btn-secondary" @click="exportGraph">导出图谱 (JSON)</button>
-                <button class="btn btn-secondary" @click="$refs.importFileInput.click()">导入图谱</button>
-                <input type="file" ref="importFileInput" style="display:none" accept=".json" @change="importGraph">
-              </div>
-              <div class="card" style="border-color:var(--error)">
-                <div class="card-header"><span class="card-title" style="color:var(--error)">危险区域</span></div>
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">清空图谱将删除所有实体、关系和文档数据，此操作不可撤销。</p>
-                <button class="btn btn-danger" @click="showClearConfirm=true">清空图谱</button>
-              </div>
-            </div>
-
-            <!-- 实体管理 -->
-            <div v-if="settingsTab==='entities'" class="settings-section" style="max-width:100%">
-              <h2 style="font-size:16px;font-weight:600;margin-bottom:20px">实体管理</h2>
-              <div style="display:flex;gap:8px;margin-bottom:16px">
-                <input class="input" style="width:300px" placeholder="搜索实体..." v-model="settingsEntitySearch" @input="loadSettingsEntities">
-                <select class="select" v-model="settingsEntityType" @change="loadSettingsEntities">
-                  <option value="">全部类型</option>
-                  <option v-for="t in entityTypes" :value="t.value">{{t.label}}</option>
-                </select>
-              </div>
-              <div class="table-wrapper">
-                <table>
-                  <thead><tr><th>名称</th><th>类型</th><th>描述</th><th>置信度</th><th>操作</th></tr></thead>
-                  <tbody>
-                    <tr v-for="e in settingsEntities" :key="e.id">
-                      <td style="color:var(--accent)">{{e.name}}</td>
-                      <td><span class="badge" :class="'badge-'+e.entity_type">{{getTypeLabel(e.entity_type)}}</span></td>
-                      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{e.description}}</td>
-                      <td>{{e.confidence}}</td>
-                      <td><button class="btn btn-ghost btn-sm" @click="deleteEntityFromSettings(e.name)">删除</button></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div v-if="settingsEntities.length===0" class="empty-state"><p>暂无数据</p></div>
-            </div>
-
-            <!-- 关系管理 -->
-            <div v-if="settingsTab==='relations'" class="settings-section" style="max-width:100%">
-              <h2 style="font-size:16px;font-weight:600;margin-bottom:20px">关系管理</h2>
-              <div class="table-wrapper">
-                <table>
-                  <thead><tr><th>源实体</th><th>关系类型</th><th>目标实体</th><th>权重</th><th>操作</th></tr></thead>
-                  <tbody>
-                    <tr v-for="r in settingsRelations" :key="r.id">
-                      <td style="color:var(--accent)">{{r.source}}</td>
-                      <td>{{r.type}}</td>
-                      <td style="color:var(--accent)">{{r.target}}</td>
-                      <td>{{r.weight}}</td>
-                      <td><button class="btn btn-ghost btn-sm" @click="deleteRelationFromSettings(r.id)">删除</button></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div v-if="settingsRelations.length===0" class="empty-state"><p>暂无数据</p></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-  </div>
-
-  <!-- Toast通知 -->
-  <div v-if="toast.show" class="toast" :class="'toast-'+toast.type">{{toast.message}}</div>
-
-  <!-- 清空确认弹窗 -->
-  <div v-if="showClearConfirm" class="modal-overlay" @click.self="showClearConfirm=false">
-    <div class="modal">
-      <div class="modal-title">确认清空图谱？</div>
-      <p style="font-size:13px;color:var(--text-secondary)">此操作将删除所有实体、关系和文档数据，且不可撤销。</p>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" @click="showClearConfirm=false">取消</button>
-        <button class="btn btn-danger" @click="clearGraphData">确认清空</button>
       </div>
     </div>
   </div>
 
-  <!-- Tooltip -->
-  <div v-if="tooltip.show" class="tooltip" :style="{left: tooltip.x+'px', top: tooltip.y+'px'}">
-    <div style="font-weight:600">{{tooltip.name}}</div>
-    <div class="tip-type">{{tooltip.type}}</div>
-    <div class="tip-desc" v-if="tooltip.desc">{{tooltip.desc}}</div>
+  <!-- Center - Graph -->
+  <div class="center">
+    <div class="graph-container" id="graphContainer">
+      <div class="empty-state" id="graphEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <circle cx="4" cy="6" r="2"/>
+          <circle cx="20" cy="6" r="2"/>
+          <circle cx="4" cy="18" r="2"/>
+          <circle cx="20" cy="18" r="2"/>
+        </svg>
+        <p>加载示例数据或导入文本开始</p>
+      </div>
+    </div>
+    <div class="graph-info" id="graphInfo" style="display:none">
+      <div class="info-badge">缩放: <span id="zoomLevel">100%</span></div>
+      <div class="info-badge">节点: <span id="visibleNodes">0</span></div>
+    </div>
+    <div class="layout-selector">
+      <select id="layoutSelect" onchange="changeLayout(this.value)">
+        <option value="force">力导向布局</option>
+        <option value="circular">环形布局</option>
+        <option value="grid">网格布局</option>
+      </select>
+    </div>
+    <div class="graph-controls">
+      <button class="btn btn-icon" onclick="zoomIn()" title="放大">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+      <button class="btn btn-icon" onclick="zoomOut()" title="缩小">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+      <button class="btn btn-icon" onclick="resetZoom()" title="重置">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Right Panel - Detail -->
+  <div class="right-panel" id="detailPanel">
+    <div class="detail-header">
+      <div class="detail-title" id="detailTitle">详情</div>
+      <div class="detail-close" onclick="closeDetail()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </div>
+    </div>
+    <div class="detail-content" id="detailContent"></div>
   </div>
 </div>
 
-<!-- D3.js -->
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<!-- Vue3 -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<div class="tooltip" id="tooltip"></div>
 
 <script>
-const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
+// ============================================================
+// State
+// ============================================================
+let graphData = { nodes: [], links: [] };
+let simulation = null;
+let svg, g, zoom;
+let selectedNode = null;
+let currentLayout = 'force';
 
-const app = createApp({
-  setup() {
-    // ==================== 主题 ====================
-    const themes = ['dark', 'light', 'warm', 'mint', 'violet'];
-    const theme = ref(localStorage.getItem('kg-theme') || 'dark');
-    const cycleTheme = () => {
-      const idx = themes.indexOf(theme.value);
-      theme.value = themes[(idx + 1) % themes.length];
-      document.documentElement.setAttribute('data-theme', theme.value);
-      localStorage.setItem('kg-theme', theme.value);
-    };
-    // 初始化主题
-    document.documentElement.setAttribute('data-theme', theme.value);
+const typeColors = {
+  person: '#ef4444',
+  organization: '#6366f1',
+  location: '#22c55e',
+  technology: '#eab308',
+  concept: '#a855f7',
+  event: '#06b6d4',
+  product: '#f97316',
+  other: '#8888a0'
+};
 
-    // ==================== 页面路由 ====================
-    const page = ref(localStorage.getItem('kg-page') || 'graph');
-    watch(page, (v) => {
-      localStorage.setItem('kg-page', v);
-      if (v === 'graph') nextTick(() => loadGraphData());
-      if (v === 'analysis') nextTick(() => loadAnalysis());
-      if (v === 'settings' && settingsTab.value === 'llm') loadLLMConfig();
+const typeLabels = {
+  person: '人物',
+  organization: '组织',
+  location: '地点',
+  technology: '技术',
+  concept: '概念',
+  event: '事件',
+  product: '产品',
+  other: '其他'
+};
+
+// ============================================================
+// API
+// ============================================================
+const API = {
+  async get(url) {
+    const res = await fetch(url);
+    return res.json();
+  },
+  async post(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
     });
-
-    // ==================== Toast ====================
-    const toast = reactive({ show: false, message: '', type: 'info' });
-    let toastTimer = null;
-    const showToast = (message, type = 'info') => {
-      toast.show = true; toast.message = message; toast.type = type;
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => { toast.show = false; }, 3000);
-    };
-
-    // ==================== API ====================
-    const api = async (url, options = {}) => {
-      try {
-        const resp = await fetch(url, {
-          headers: { 'Content-Type': 'application/json', ...options.headers },
-          ...options,
-        });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-          throw new Error(err.detail || '请求失败');
-        }
-        return await resp.json();
-      } catch (e) {
-        showToast(e.message, 'error');
-        throw e;
-      }
-    };
-
-    // ==================== 实体类型 ====================
-    const entityTypes = [
-      { value: 'person', label: '人物', color: 'var(--type-person)' },
-      { value: 'organization', label: '组织', color: 'var(--type-organization)' },
-      { value: 'location', label: '地点', color: 'var(--type-location)' },
-      { value: 'concept', label: '概念', color: 'var(--type-concept)' },
-      { value: 'event', label: '事件', color: 'var(--type-event)' },
-      { value: 'technology', label: '技术', color: 'var(--type-technology)' },
-      { value: 'product', label: '产品', color: 'var(--type-product)' },
-      { value: 'other', label: '其他', color: 'var(--type-other)' },
-    ];
-    const typeColorMap = {};
-    entityTypes.forEach(t => { typeColorMap[t.value] = t.color; });
-    const getTypeColor = (type) => typeColorMap[type] || 'var(--type-other)';
-    const getTypeLabel = (type) => {
-      const found = entityTypes.find(t => t.value === type);
-      return found ? found.label : type;
-    };
-
-    // ==================== 图谱页面 ====================
-    const graphCanvas = ref(null);
-    const graphSvg = ref(null);
-    const graphSearch = ref('');
-    const graphTypeFilter = ref('');
-    const graphLayout = ref('force');
-    const graphZoom = ref(1);
-    const graphStats = reactive({ nodeCount: 0, edgeCount: 0 });
-    const allEntities = ref([]);
-    const filteredEntities = ref([]);
-    const entityFilter = ref('');
-    const entityTypeFilter = ref('');
-    const selectedEntity = ref(null);
-    const entityRelations = ref([]);
-    const tooltip = reactive({ show: false, x: 0, y: 0, name: '', type: '', desc: '' });
-
-    // D3图谱相关
-    let simulation = null;
-    let svgGroup = null;
-    let zoomBehavior = null;
-    let graphNodes = [];
-    let graphEdges = [];
-
-    const loadGraphData = async () => {
-      try {
-        const params = new URLSearchParams();
-        if (graphTypeFilter.value) params.set('entity_types', graphTypeFilter.value);
-        params.set('limit', '500');
-        const data = await api(`/api/graph/data?${params}`);
-        graphNodes = data.nodes || [];
-        graphEdges = data.edges || [];
-        graphStats.nodeCount = graphNodes.length;
-        graphStats.edgeCount = graphEdges.length;
-        allEntities.value = graphNodes;
-        filterEntities();
-        renderGraph();
-      } catch (e) { /* handled by api */ }
-    };
-
-    const filterEntities = () => {
-      let list = [...allEntities.value];
-      if (entityTypeFilter.value) {
-        list = list.filter(e => e.entity_type === entityTypeFilter.value);
-      }
-      if (entityFilter.value) {
-        const q = entityFilter.value.toLowerCase();
-        list = list.filter(e => e.name.toLowerCase().includes(q) || (e.description||'').toLowerCase().includes(q));
-      }
-      filteredEntities.value = list;
-    };
-
-    const renderGraph = () => {
-      if (!graphSvg.value) return;
-      const svg = d3.select(graphSvg.value);
-      svg.selectAll('*').remove();
-
-      const container = graphSvg.value.parentElement;
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-
-      svg.attr('width', width).attr('height', height);
-
-      // 定义箭头
-      const defs = svg.append('defs');
-      defs.append('marker')
-        .attr('id', 'arrowhead')
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 20)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
-        .attr('orient', 'auto')
-        .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', 'var(--graph-edge)');
-
-      svgGroup = svg.append('g');
-
-      // 缩放
-      zoomBehavior = d3.zoom()
-        .scaleExtent([0.1, 5])
-        .on('zoom', (event) => {
-          svgGroup.attr('transform', event.transform);
-          graphZoom.value = event.transform.k;
-        });
-      svg.call(zoomBehavior);
-
-      if (graphNodes.length === 0) {
-        svgGroup.append('text')
-          .attr('x', width / 2)
-          .attr('y', height / 2)
-          .attr('text-anchor', 'middle')
-          .attr('fill', 'var(--text-tertiary)')
-          .attr('font-size', '14px')
-          .text('暂无数据，请先导入知识');
-        return;
-      }
-
-      // 节点大小映射
-      const degreeMap = {};
-      graphEdges.forEach(e => {
-        degreeMap[e.source] = (degreeMap[e.source] || 0) + 1;
-        degreeMap[e.target] = (degreeMap[e.target] || 0) + 1;
-      });
-      const maxDegree = Math.max(1, ...Object.values(degreeMap));
-
-      // 边
-      const edgeGroup = svgGroup.append('g').attr('class', 'edges');
-      const edges = edgeGroup.selectAll('line')
-        .data(graphEdges)
-        .enter()
-        .append('line')
-        .attr('stroke', 'var(--graph-edge)')
-        .attr('stroke-width', d => Math.max(1, (d.weight || 1) * 0.5))
-        .attr('marker-end', 'url(#arrowhead)');
-
-      // 边标签
-      const edgeLabelGroup = svgGroup.append('g').attr('class', 'edge-labels');
-      const edgeLabels = edgeLabelGroup.selectAll('text')
-        .data(graphEdges)
-        .enter()
-        .append('text')
-        .attr('font-size', '9px')
-        .attr('fill', 'var(--text-tertiary)')
-        .attr('text-anchor', 'middle')
-        .text(d => d.type);
-
-      // 节点
-      const nodeGroup = svgGroup.append('g').attr('class', 'nodes');
-      const nodes = nodeGroup.selectAll('g')
-        .data(graphNodes)
-        .enter()
-        .append('g')
-        .style('cursor', 'pointer')
-        .call(d3.drag()
-          .on('start', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0.3).restart();
-            d.fx = d.x; d.fy = d.y;
-          })
-          .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
-          .on('end', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0);
-            d.fx = null; d.fy = null;
-          })
-        );
-
-      // 节点圆形
-      nodes.append('circle')
-        .attr('r', d => {
-          const degree = degreeMap[d.name] || 0;
-          return 12 + (degree / maxDegree) * 20;
-        })
-        .attr('fill', d => getTypeColor(d.entity_type))
-        .attr('stroke', d => getTypeColor(d.entity_type))
-        .attr('stroke-width', 2)
-        .attr('stroke-opacity', 0.3)
-        .attr('fill-opacity', 0.8);
-
-      // 节点文字
-      nodes.append('text')
-        .attr('dy', d => {
-          const degree = degreeMap[d.name] || 0;
-          return 12 + (degree / maxDegree) * 20 + 14;
-        })
-        .attr('text-anchor', 'middle')
-        .attr('fill', 'var(--text-primary)')
-        .attr('font-size', '11px')
-        .text(d => d.name.length > 6 ? d.name.slice(0, 6) + '…' : d.name);
-
-      // 节点交互
-      nodes.on('click', (event, d) => {
-        event.stopPropagation();
-        selectEntity(d);
-      })
-      .on('mouseover', (event, d) => {
-        tooltip.show = true;
-        tooltip.x = event.clientX + 10;
-        tooltip.y = event.clientY - 10;
-        tooltip.name = d.name;
-        tooltip.type = getTypeLabel(d.entity_type);
-        tooltip.desc = d.description || '';
-        // 高亮相关边
-        edges.attr('stroke-opacity', e => (e.source.name === d.name || e.target.name === d.name) ? 0.8 : 0.05)
-             .attr('stroke', e => (e.source.name === d.name || e.target.name === d.name) ? getTypeColor(d.entity_type) : 'var(--graph-edge)');
-        edgeLabels.attr('opacity', e => (e.source.name === d.name || e.target.name === d.name) ? 1 : 0.1);
-        nodes.selectAll('circle').attr('opacity', n => {
-          if (n.name === d.name) return 1;
-          const connected = graphEdges.some(e => (e.source.name === d.name && e.target.name === n.name) || (e.target.name === d.name && e.source.name === n.name));
-          return connected ? 1 : 0.15;
-        });
-        nodes.selectAll('text').attr('opacity', n => {
-          if (n.name === d.name) return 1;
-          const connected = graphEdges.some(e => (e.source.name === d.name && e.target.name === n.name) || (e.target.name === d.name && e.source.name === n.name));
-          return connected ? 1 : 0.15;
-        });
-      })
-      .on('mouseout', () => {
-        tooltip.show = false;
-        edges.attr('stroke-opacity', null).attr('stroke', 'var(--graph-edge)');
-        edgeLabels.attr('opacity', 1);
-        nodes.selectAll('circle').attr('opacity', 1);
-        nodes.selectAll('text').attr('opacity', 1);
-      });
-
-      // 点击空白取消选中
-      svg.on('click', () => { selectedEntity.value = null; });
-
-      // 力导向布局
-      if (simulation) simulation.stop();
-      simulation = d3.forceSimulation(graphNodes)
-        .force('link', d3.forceLink(graphEdges).id(d => d.name).distance(100))
-        .force('charge', d3.forceManyBody().strength(-200))
-        .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide(30))
-        .on('tick', () => {
-          edges
-            .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
-          edgeLabels
-            .attr('x', d => (d.source.x + d.target.x) / 2)
-            .attr('y', d => (d.source.y + d.target.y) / 2);
-          nodes.attr('transform', d => `translate(${d.x},${d.y})`);
-        });
-    };
-
-    const selectEntity = async (entity) => {
-      selectedEntity.value = entity;
-      try {
-        const data = await api(`/api/entities/${encodeURIComponent(entity.name)}`);
-        entityRelations.value = data.relations || [];
-      } catch (e) { entityRelations.value = []; }
-    };
-
-    const expandNeighbors = async () => {
-      if (!selectedEntity.value) return;
-      try {
-        const data = await api('/api/graph/neighbors', {
-          method: 'POST',
-          body: JSON.stringify({ entity: selectedEntity.value.name, depth: 1 }),
-        });
-        // 合并新节点和边
-        const existingNames = new Set(graphNodes.map(n => n.name));
-        const newNodes = (data.nodes || []).filter(n => !existingNames.has(n.name));
-        graphNodes = [...graphNodes, ...newNodes];
-        graphEdges = [...graphEdges, ...(data.edges || [])];
-        // 去重边
-        const edgeSet = new Set();
-        graphEdges = graphEdges.filter(e => {
-          const key = `${e.source.name||e.source}-${e.target.name||e.target}-${e.type}`;
-          if (edgeSet.has(key)) return false;
-          edgeSet.add(key);
-          return true;
-        });
-        graphStats.nodeCount = graphNodes.length;
-        graphStats.edgeCount = graphEdges.length;
-        allEntities.value = graphNodes;
-        filterEntities();
-        renderGraph();
-      } catch (e) { /* handled */ }
-    };
-
-    const deleteSelectedEntity = async () => {
-      if (!selectedEntity.value) return;
-      try {
-        await api(`/api/entities/${encodeURIComponent(selectedEntity.value.name)}`, { method: 'DELETE' });
-        showToast('实体已删除', 'success');
-        selectedEntity.value = null;
-        loadGraphData();
-      } catch (e) { /* handled */ }
-    };
-
-    const searchGraphNodes = () => {
-      if (!graphSearch.value.trim()) return;
-      const found = graphNodes.find(n => n.name.includes(graphSearch.value));
-      if (found) {
-        selectEntity(found);
-        // 居中到该节点
-        if (svgGroup && found.x !== undefined) {
-          const container = graphSvg.value.parentElement;
-          const transform = d3.zoomIdentity
-            .translate(container.clientWidth / 2, container.clientHeight / 2)
-            .scale(1.5)
-            .translate(-found.x, -found.y);
-          d3.select(graphSvg.value).transition().duration(500).call(zoomBehavior.transform, transform);
-        }
-      } else {
-        showToast('未找到匹配的实体', 'info');
-      }
-    };
-
-    const focusNode = (name) => {
-      graphSearch.value = name;
-      nextTick(() => searchGraphNodes());
-    };
-
-    const highlightRelation = (rel) => {
-      // 高亮特定关系
-      if (!svgGroup) return;
-      svgGroup.selectAll('.edges line')
-        .attr('stroke', d => (d.source.name === rel.source && d.target.name === rel.target && d.type === rel.type) ? 'var(--accent)' : 'var(--graph-edge)')
-        .attr('stroke-width', d => (d.source.name === rel.source && d.target.name === rel.target && d.type === rel.type) ? 3 : 1)
-        .attr('stroke-opacity', d => (d.source.name === rel.source && d.target.name === rel.target && d.type === rel.type) ? 1 : 0.1);
-      setTimeout(() => {
-        if (svgGroup) {
-          svgGroup.selectAll('.edges line')
-            .attr('stroke', 'var(--graph-edge)')
-            .attr('stroke-width', d => Math.max(1, (d.weight || 1) * 0.5))
-            .attr('stroke-opacity', 1);
-        }
-      }, 2000);
-    };
-
-    const zoomIn = () => {
-      if (!graphSvg.value || !zoomBehavior) return;
-      d3.select(graphSvg.value).transition().duration(300).call(zoomBehavior.scaleBy, 1.3);
-    };
-    const zoomOut = () => {
-      if (!graphSvg.value || !zoomBehavior) return;
-      d3.select(graphSvg.value).transition().duration(300).call(zoomBehavior.scaleBy, 0.7);
-    };
-    const fitGraph = () => {
-      if (!graphSvg.value || !zoomBehavior) return;
-      const container = graphSvg.value.parentElement;
-      d3.select(graphSvg.value).transition().duration(500)
-        .call(zoomBehavior.transform, d3.zoomIdentity.translate(container.clientWidth/2, container.clientHeight/2).scale(0.8));
-    };
-    const resetGraph = () => { fitGraph(); selectedEntity.value = null; };
-    const relayoutGraph = () => {
-      // 重新布局
-      if (simulation) {
-        if (graphLayout.value === 'circular') {
-          const container = graphSvg.value.parentElement;
-          const cx = container.clientWidth / 2, cy = container.clientHeight / 2;
-          const r = Math.min(cx, cy) * 0.6;
-          graphNodes.forEach((n, i) => {
-            const angle = (2 * Math.PI * i) / graphNodes.length;
-            n.x = cx + r * Math.cos(angle);
-            n.y = cy + r * Math.sin(angle);
-            n.fx = n.x; n.fy = n.y;
-          });
-          simulation.alpha(0.3).restart();
-          setTimeout(() => { graphNodes.forEach(n => { n.fx = null; n.fy = null; }); }, 1000);
-        } else if (graphLayout.value === 'grid') {
-          const container = graphSvg.value.parentElement;
-          const cols = Math.ceil(Math.sqrt(graphNodes.length));
-          const spacing = 120;
-          const startX = (container.clientWidth - cols * spacing) / 2 + spacing / 2;
-          const startY = 100;
-          graphNodes.forEach((n, i) => {
-            n.x = startX + (i % cols) * spacing;
-            n.y = startY + Math.floor(i / cols) * spacing;
-            n.fx = n.x; n.fy = n.y;
-          });
-          simulation.alpha(0.3).restart();
-          setTimeout(() => { graphNodes.forEach(n => { n.fx = null; n.fy = null; }); }, 1000);
-        } else {
-          graphNodes.forEach(n => { n.fx = null; n.fy = null; });
-          simulation.alpha(1).restart();
-        }
-      }
-    };
-
-    // ==================== 导入页面 ====================
-    const importTab = ref('text');
-    const importText = ref('');
-    const importLoading = ref(false);
-    const ingestResult = ref(null);
-    const ingestTaskId = ref('');
-    const manualEntity = reactive({ name: '', entity_type: 'other', description: '' });
-    const manualRelation = reactive({ source: '', target: '', relation_type: 'related_to' });
-
-    const startIngest = async () => {
-      if (!importText.value.trim()) return;
-      importLoading.value = true;
-      ingestResult.value = null;
-      try {
-        const result = await api('/api/documents/ingest-text', {
-          method: 'POST',
-          body: JSON.stringify({ text: importText.value, title: '文本导入' }),
-        });
-        ingestTaskId.value = result.task_id;
-        // 轮询任务状态
-        pollTask(result.task_id);
-      } catch (e) {
-        importLoading.value = false;
-      }
-    };
-
-    const pollTask = async (taskId) => {
-      const maxAttempts = 60;
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise(r => setTimeout(r, 2000));
-        try {
-          const task = await api(`/api/documents/task/${taskId}`);
-          if (task.status === 'completed') {
-            ingestResult.value = { entities: task.entities, relations: task.relations };
-            importLoading.value = false;
-            showToast('分析完成，请确认导入', 'success');
-            return;
-          } else if (task.status === 'failed') {
-            showToast('分析失败: ' + (task.error || '未知错误'), 'error');
-            importLoading.value = false;
-            return;
-          }
-        } catch (e) {
-          importLoading.value = false;
-          return;
-        }
-      }
-      importLoading.value = false;
-      showToast('分析超时', 'error');
-    };
-
-    const confirmImport = async () => {
-      if (!ingestResult.value) return;
-      try {
-        const result = await api('/api/documents/ingest-confirm', {
-          method: 'POST',
-          body: JSON.stringify({
-            task_id: ingestTaskId.value,
-            entities: ingestResult.value.entities,
-            relations: ingestResult.value.relations,
-          }),
-        });
-        showToast(`已导入 ${result.imported_entities} 个实体，${result.imported_relations} 条关系`, 'success');
-        ingestResult.value = null;
-        importText.value = '';
-      } catch (e) { /* handled */ }
-    };
-
-    const handleFileSelect = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      await uploadFile(file);
-    };
-
-    const handleFileDrop = async (event) => {
-      const file = event.dataTransfer.files[0];
-      if (!file) return;
-      await uploadFile(file);
-    };
-
-    const uploadFile = async (file) => {
-      importLoading.value = true;
-      ingestResult.value = null;
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const resp = await fetch('/api/documents/upload', { method: 'POST', body: formData });
-        if (!resp.ok) throw new Error('上传失败');
-        const result = await resp.json();
-        ingestTaskId.value = result.task_id;
-        pollTask(result.task_id);
-      } catch (e) {
-        importLoading.value = false;
-        showToast(e.message, 'error');
-      }
-    };
-
-    const addManualEntity = async () => {
-      if (!manualEntity.name.trim()) return;
-      try {
-        await api('/api/entities', {
-          method: 'POST',
-          body: JSON.stringify(manualEntity),
-        });
-        showToast(`实体 "${manualEntity.name}" 已添加`, 'success');
-        manualEntity.name = ''; manualEntity.description = '';
-      } catch (e) { /* handled */ }
-    };
-
-    const addManualRelation = async () => {
-      if (!manualRelation.source.trim() || !manualRelation.target.trim()) return;
-      try {
-        await api('/api/relations', {
-          method: 'POST',
-          body: JSON.stringify(manualRelation),
-        });
-        showToast('关系已添加', 'success');
-        manualRelation.source = ''; manualRelation.target = '';
-      } catch (e) { /* handled */ }
-    };
-
-    // ==================== 查询页面 ====================
-    const queryMessages = ref([]);
-    const queryInput = ref('');
-    const queryLoading = ref(false);
-    const queryMessagesEl = ref(null);
-    const queryHistory = ref([]);
-
-    const sendQuery = async () => {
-      const q = queryInput.value.trim();
-      if (!q) return;
-      queryMessages.value.push({ id: Date.now(), role: 'user', content: q });
-      queryHistory.value.unshift({ question: q, time: new Date().toLocaleTimeString() });
-      if (queryHistory.value.length > 20) queryHistory.value.pop();
-      queryInput.value = '';
-      queryLoading.value = true;
-      nextTick(() => {
-        if (queryMessagesEl.value) queryMessagesEl.value.scrollTop = queryMessagesEl.value.scrollHeight;
-      });
-
-      try {
-        const result = await api('/api/query', {
-          method: 'POST',
-          body: JSON.stringify({ question: q }),
-        });
-        queryMessages.value.push({
-          id: Date.now() + 1,
-          role: 'ai',
-          content: (result.answer || '未能获取回答').replace(/\n/g, '<br>'),
-        });
-      } catch (e) {
-        queryMessages.value.push({
-          id: Date.now() + 1,
-          role: 'ai',
-          content: '查询失败，请稍后重试。',
-        });
-      }
-      queryLoading.value = false;
-      nextTick(() => {
-        if (queryMessagesEl.value) queryMessagesEl.value.scrollTop = queryMessagesEl.value.scrollHeight;
-      });
-    };
-
-    const setQuery = (q) => { queryInput.value = q; sendQuery(); };
-
-    // ==================== 分析页面 ====================
-    const analysisStats = reactive({});
-    const communities = ref([]);
-    const centralityData = ref([]);
-    const entityTypeChart = ref(null);
-    const relationTypeChart = ref(null);
-    const topNodesChart = ref(null);
-
-    const loadAnalysis = async () => {
-      try {
-        const stats = await api('/api/stats');
-        Object.assign(analysisStats, stats);
-
-        // 社区检测
-        try {
-          const comm = await api('/api/algorithms/communities');
-          communities.value = comm.communities || [];
-        } catch (e) { communities.value = []; }
-
-        // 中心性
-        try {
-          const cent = await api('/api/algorithms/centrality?method=degree&top_k=10');
-          centralityData.value = cent || [];
-        } catch (e) { centralityData.value = []; }
-
-        // 绘制图表
-        nextTick(() => drawCharts(stats));
-      } catch (e) { /* handled */ }
-    };
-
-    const drawCharts = (stats) => {
-      // 实体类型分布（简单SVG饼图）
-      drawDonut(entityTypeChart.value, stats.entity_types || {});
-      // 关系类型分布
-      drawBar(relationTypeChart.value, stats.relation_types || {});
-      // Top节点 - 用度分布
-      if (centralityData.value.length) {
-        drawBar(topNodesChart.value, Object.fromEntries(centralityData.value.map(n => [n.name, n.centrality || n.degree || 0])));
-      }
-    };
-
-    const drawDonut = (container, data) => {
-      if (!container) return;
-      container.innerHTML = '';
-      const entries = Object.entries(data);
-      if (entries.length === 0) {
-        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-tertiary);font-size:12px">暂无数据</div>';
-        return;
-      }
-      const total = entries.reduce((s, [, v]) => s + v, 0);
-      const colors = ['#E91E63', '#2196F3', '#4CAF50', '#9C27B0', '#FF9800', '#00BCD4', '#795548', '#607D8B'];
-      const w = container.clientWidth, h = 200, r = Math.min(w, h) / 2 - 20;
-      const svg = d3.select(container).append('svg').attr('width', w).attr('height', h);
-      const g = svg.append('g').attr('transform', `translate(${w/2},${h/2})`);
-
-      let angle = 0;
-      entries.forEach(([key, val], i) => {
-        const sliceAngle = (val / total) * 2 * Math.PI;
-        const x1 = r * Math.cos(angle);
-        const y1 = r * Math.sin(angle);
-        const x2 = r * Math.cos(angle + sliceAngle);
-        const y2 = r * Math.sin(angle + sliceAngle);
-        const large = sliceAngle > Math.PI ? 1 : 0;
-        g.append('path')
-          .attr('d', `M0,0L${x1},${y1}A${r},${r},0,${large},1,${x2},${y2}Z`)
-          .attr('fill', colors[i % colors.length])
-          .attr('opacity', 0.8);
-        angle += sliceAngle;
-      });
-
-      // 图例
-      const legend = svg.append('g').attr('transform', `translate(${w - 120}, 10)`);
-      entries.forEach(([key, val], i) => {
-        const lg = legend.append('g').attr('transform', `translate(0, ${i * 18})`);
-        lg.append('rect').attr('width', 10).attr('height', 10).attr('rx', 2).attr('fill', colors[i % colors.length]);
-        lg.append('text').attr('x', 14).attr('y', 9).attr('font-size', '10px').attr('fill', 'var(--text-secondary)').text(`${key} (${Math.round(val/total*100)}%)`);
-      });
-    };
-
-    const drawBar = (container, data) => {
-      if (!container) return;
-      container.innerHTML = '';
-      const entries = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      if (entries.length === 0) {
-        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-tertiary);font-size:12px">暂无数据</div>';
-        return;
-      }
-      const w = container.clientWidth, h = 200;
-      const barH = 16, gap = 4;
-      const maxVal = Math.max(...entries.map(([, v]) => v));
-      const svg = d3.select(container).append('svg').attr('width', w).attr('height', entries.length * (barH + gap) + 10);
-      const colors = ['#E91E63', '#2196F3', '#4CAF50', '#9C27B0', '#FF9800', '#00BCD4', '#795548', '#607D8B', '#E91E63', '#2196F3'];
-
-      entries.forEach(([key, val], i) => {
-        const y = i * (barH + gap) + 5;
-        const barWidth = (val / maxVal) * (w - 120);
-        svg.append('text').attr('x', 0).attr('y', y + 12).attr('font-size', '10px').attr('fill', 'var(--text-secondary)').text(key.length > 8 ? key.slice(0, 8) + '…' : key);
-        svg.append('rect').attr('x', 80).attr('y', y).attr('width', barWidth).attr('height', barH).attr('rx', 3).attr('fill', colors[i % colors.length]).attr('opacity', 0.7);
-        svg.append('text').attr('x', 80 + barWidth + 6).attr('y', y + 12).attr('font-size', '10px').attr('fill', 'var(--text-primary)').text(val);
-      });
-    };
-
-    // ==================== 设置页面 ====================
-    const settingsTab = ref('llm');
-    const llmConfig = reactive({ provider: 'deepseek', api_key: '', model: 'deepseek-chat', base_url: 'https://api.deepseek.com', temperature: 0.3 });
-    const llmTesting = ref(false);
-    const llmTestResult = ref(null);
-    const dbInfo = reactive({});
-    const showClearConfirm = ref(false);
-    const settingsEntities = ref([]);
-    const settingsRelations = ref([]);
-    const settingsEntitySearch = ref('');
-    const settingsEntityType = ref('');
-
-    const loadLLMConfig = async () => {
-      try {
-        const cfg = await api('/api/settings/llm');
-        Object.assign(llmConfig, cfg);
-        // api_key_masked 不覆盖 api_key
-        if (cfg.api_key_masked && !cfg.api_key) {
-          llmConfig.api_key = ''; // 显示masked版本
-        }
-      } catch (e) { /* handled */ }
-    };
-
-    const saveLLMConfig = async () => {
-      try {
-        await api('/api/settings/llm', {
-          method: 'PUT',
-          body: JSON.stringify(llmConfig),
-        });
-        showToast('配置已保存', 'success');
-      } catch (e) { /* handled */ }
-    };
-
-    const testLLMConnection = async () => {
-      llmTesting.value = true;
-      llmTestResult.value = null;
-      try {
-        const result = await api('/api/settings/llm/test', { method: 'POST' });
-        llmTestResult.value = result;
-      } catch (e) {
-        llmTestResult.value = { success: false, message: e.message };
-      }
-      llmTesting.value = false;
-    };
-
-    const loadDatabaseInfo = async () => {
-      try {
-        const info = await api('/api/database/info');
-        Object.assign(dbInfo, info);
-      } catch (e) { /* handled */ }
-    };
-
-    const exportGraph = async () => {
-      try {
-        const data = await api('/api/graph/export');
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'knowledge_graph_export.json'; a.click();
-        URL.revokeObjectURL(url);
-        showToast('导出成功', 'success');
-      } catch (e) { /* handled */ }
-    };
-
-    const importGraph = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const resp = await fetch('/api/graph/import', { method: 'POST', body: formData });
-        if (!resp.ok) throw new Error('导入失败');
-        const result = await resp.json();
-        showToast(`已导入 ${result.imported_entities} 个实体，${result.imported_relations} 条关系`, 'success');
-        loadDatabaseInfo();
-      } catch (e) {
-        showToast(e.message, 'error');
-      }
-    };
-
-    const clearGraphData = async () => {
-      try {
-        await api('/api/graph/clear', { method: 'POST' });
-        showToast('图谱已清空', 'success');
-        showClearConfirm.value = false;
-        loadDatabaseInfo();
-      } catch (e) { /* handled */ }
-    };
-
-    const loadSettingsEntities = async () => {
-      try {
-        const params = new URLSearchParams();
-        if (settingsEntitySearch.value) params.set('keyword', settingsEntitySearch.value);
-        if (settingsEntityType.value) params.set('entity_type', settingsEntityType.value);
-        params.set('limit', '50');
-        settingsEntities.value = await api(`/api/entities?${params}`);
-      } catch (e) { /* handled */ }
-    };
-
-    const loadSettingsRelations = async () => {
-      try {
-        settingsRelations.value = await api('/api/relations?limit=50');
-      } catch (e) { /* handled */ }
-    };
-
-    const deleteEntityFromSettings = async (name) => {
-      try {
-        await api(`/api/entities/${encodeURIComponent(name)}`, { method: 'DELETE' });
-        showToast('已删除', 'success');
-        loadSettingsEntities();
-      } catch (e) { /* handled */ }
-    };
-
-    const deleteRelationFromSettings = async (id) => {
-      try {
-        await api(`/api/relations/${id}`, { method: 'DELETE' });
-        showToast('已删除', 'success');
-        loadSettingsRelations();
-      } catch (e) { /* handled */ }
-    };
-
-    // ==================== 初始化 ====================
-    onMounted(() => {
-      loadGraphData();
-      loadLLMConfig();
+    return res.json();
+  },
+  async del(url) {
+    const res = await fetch(url, { method: 'DELETE' });
+    return res.json();
+  }
+};
+
+// ============================================================
+// Init
+// ============================================================
+function init() {
+  initGraph();
+  loadData();
+  initSearch();
+}
+
+function initGraph() {
+  const container = document.getElementById('graphContainer');
+  svg = d3.select(container).append('svg');
+  
+  // Zoom
+  zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', (e) => {
+      g.attr('transform', e.transform);
+      document.getElementById('zoomLevel').textContent = Math.round(e.transform.k * 100) + '%';
     });
+  
+  svg.call(zoom);
+  
+  g = svg.append('g');
+  
+  // Resize
+  const resize = () => {
+    const { width, height } = container.getBoundingClientRect();
+    svg.attr('width', width).attr('height', height);
+  };
+  resize();
+  window.addEventListener('resize', resize);
+}
 
-    return {
-      // 主题
-      theme, cycleTheme,
-      // 页面
-      page,
-      // Toast
-      toast, showToast,
-      // 实体类型
-      entityTypes, getTypeColor, getTypeLabel,
-      // 图谱
-      graphCanvas, graphSvg, graphSearch, graphTypeFilter, graphLayout, graphZoom, graphStats,
-      allEntities, filteredEntities, entityFilter, entityTypeFilter,
-      selectedEntity, entityRelations, tooltip,
-      loadGraphData, filterEntities, selectEntity, expandNeighbors, deleteSelectedEntity,
-      searchGraphNodes, focusNode, highlightRelation,
-      zoomIn, zoomOut, fitGraph, resetGraph, relayoutGraph,
-      // 导入
-      importTab, importText, importLoading, ingestResult, ingestTaskId,
-      manualEntity, manualRelation,
-      startIngest, confirmImport, handleFileSelect, handleFileDrop,
-      addManualEntity, addManualRelation,
-      // 查询
-      queryMessages, queryInput, queryLoading, queryMessagesEl, queryHistory,
-      sendQuery, setQuery,
-      // 分析
-      analysisStats, communities, centralityData,
-      entityTypeChart, relationTypeChart, topNodesChart,
-      loadAnalysis,
-      // 设置
-      settingsTab, llmConfig, llmTesting, llmTestResult, dbInfo, showClearConfirm,
-      settingsEntities, settingsRelations, settingsEntitySearch, settingsEntityType,
-      loadLLMConfig, saveLLMConfig, testLLMConnection,
-      loadDatabaseInfo, exportGraph, importGraph, clearGraphData,
-      loadSettingsEntities, loadSettingsRelations,
-      deleteEntityFromSettings, deleteRelationFromSettings,
-    };
+// ============================================================
+// Data Loading
+// ============================================================
+async function loadData() {
+  const [entities, relations, stats] = await Promise.all([
+    API.get('/api/entities'),
+    API.get('/api/relations'),
+    API.get('/api/stats').catch(() => ({ total_entities: 0, total_relations: 0, components: 0 }))
+  ]);
+  
+  // Update stats
+  document.getElementById('statNodes').textContent = stats.total_entities || entities.length;
+  document.getElementById('statEdges').textContent = stats.total_relations || relations.length;
+  document.getElementById('statComponents').textContent = stats.components || 0;
+  
+  // Build graph data
+  const nodeMap = new Map();
+  entities.forEach(e => {
+    nodeMap.set(e.name, {
+      id: e.name,
+      name: e.name,
+      type: e.entity_type,
+      description: e.description,
+      properties: e.properties
+    });
+  });
+  
+  const links = relations.map(r => ({
+    source: r.source_entity,
+    target: r.target_entity,
+    type: r.relation_type,
+    weight: r.weight,
+    evidence: r.evidence
+  })).filter(l => nodeMap.has(l.source) && nodeMap.has(l.target));
+  
+  graphData = {
+    nodes: Array.from(nodeMap.values()),
+    links: links
+  };
+  
+  updateEntityList();
+  updateRelationList();
+  renderGraph();
+}
+
+// ============================================================
+// Graph Rendering
+// ============================================================
+function renderGraph() {
+  const container = document.getElementById('graphContainer');
+  const emptyState = document.getElementById('graphEmpty');
+  const graphInfo = document.getElementById('graphInfo');
+  
+  if (graphData.nodes.length === 0) {
+    emptyState.style.display = 'flex';
+    graphInfo.style.display = 'none';
+    g.selectAll('*').remove();
+    return;
+  }
+  
+  emptyState.style.display = 'none';
+  graphInfo.style.display = 'flex';
+  document.getElementById('visibleNodes').textContent = graphData.nodes.length;
+  
+  // Clear
+  g.selectAll('*').remove();
+  
+  // Arrow marker
+  svg.append('defs').append('marker')
+    .attr('id', 'arrowhead')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-5L10,0L0,5')
+    .attr('fill', '#555570');
+  
+  // Links
+  const link = g.append('g')
+    .attr('class', 'links')
+    .selectAll('line')
+    .data(graphData.links)
+    .join('line')
+    .attr('stroke', '#2a2a3a')
+    .attr('stroke-width', d => Math.max(1, d.weight || 1))
+    .attr('marker-end', 'url(#arrowhead)');
+  
+  // Link labels
+  const linkLabel = g.append('g')
+    .attr('class', 'link-labels')
+    .selectAll('text')
+    .data(graphData.links)
+    .join('text')
+    .text(d => d.type)
+    .attr('font-size', '10px')
+    .attr('fill', '#555570')
+    .attr('text-anchor', 'middle');
+  
+  // Nodes
+  const node = g.append('g')
+    .attr('class', 'nodes')
+    .selectAll('g')
+    .data(graphData.nodes)
+    .join('g')
+    .call(d3.drag()
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended));
+  
+  // Node circles
+  node.append('circle')
+    .attr('r', d => getNodeRadius(d))
+    .attr('fill', d => typeColors[d.type] || typeColors.other)
+    .attr('stroke', '#0a0a0f')
+    .attr('stroke-width', 2)
+    .on('mouseover', showTooltip)
+    .on('mouseout', hideTooltip)
+    .on('click', (e, d) => {
+      e.stopPropagation();
+      selectNode(d);
+    });
+  
+  // Node labels
+  node.append('text')
+    .text(d => d.name)
+    .attr('font-size', '11px')
+    .attr('fill', '#e8e8ed')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => getNodeRadius(d) + 14)
+    .style('pointer-events', 'none');
+  
+  // Simulation
+  if (currentLayout === 'force') {
+    simulation = d3.forceSimulation(graphData.nodes)
+      .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(100))
+      .force('charge', d3.forceManyBody().strength(-300))
+      .force('center', d3.forceCenter(
+        container.clientWidth / 2,
+        container.clientHeight / 2
+      ))
+      .force('collision', d3.forceCollide().radius(30));
+    
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
+      
+      linkLabel
+        .attr('x', d => (d.source.x + d.target.x) / 2)
+        .attr('y', d => (d.source.y + d.target.y) / 2);
+      
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+  } else if (currentLayout === 'circular') {
+    const radius = Math.min(container.clientWidth, container.clientHeight) / 3;
+    const angleStep = (2 * Math.PI) / graphData.nodes.length;
+    
+    graphData.nodes.forEach((d, i) => {
+      d.x = container.clientWidth / 2 + radius * Math.cos(i * angleStep);
+      d.y = container.clientHeight / 2 + radius * Math.sin(i * angleStep);
+    });
+    
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    
+    linkLabel
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2);
+    
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  } else if (currentLayout === 'grid') {
+    const cols = Math.ceil(Math.sqrt(graphData.nodes.length));
+    const spacing = 80;
+    const startX = (container.clientWidth - (cols - 1) * spacing) / 2;
+    const startY = 100;
+    
+    graphData.nodes.forEach((d, i) => {
+      d.x = startX + (i % cols) * spacing;
+      d.y = startY + Math.floor(i / cols) * spacing;
+    });
+    
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    
+    linkLabel
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2);
+    
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  }
+  
+  // Fit to screen
+  setTimeout(() => {
+    const bounds = g.node().getBBox();
+    const fullWidth = container.clientWidth;
+    const fullHeight = container.clientHeight;
+    const width = bounds.width;
+    const height = bounds.height;
+    const midX = bounds.x + width / 2;
+    const midY = bounds.y + height / 2;
+    
+    if (width > 0 && height > 0) {
+      const scale = 0.8 / Math.max(width / fullWidth, height / fullHeight);
+      const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+      
+      svg.transition().duration(500).call(
+        zoom.transform,
+        d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+      );
+    }
+  }, 500);
+}
+
+function getNodeRadius(d) {
+  const connections = graphData.links.filter(l => 
+    l.source.id === d.id || l.target.id === d.id
+  ).length;
+  return Math.max(12, Math.min(20, 8 + connections * 2));
+}
+
+// ============================================================
+// Drag
+// ============================================================
+function dragstarted(event, d) {
+  if (simulation) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(event, d) {
+  d.fx = event.x;
+  d.fy = event.y;
+}
+
+function dragended(event, d) {
+  if (simulation) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
+
+// ============================================================
+// Tooltip
+// ============================================================
+function showTooltip(event, d) {
+  const tooltip = document.getElementById('tooltip');
+  const type = typeLabels[d.type] || d.type;
+  tooltip.innerHTML = `<strong>${d.name}</strong><br><span style="color:${typeColors[d.type]}">${type}</span>`;
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+// ============================================================
+// Selection
+// ============================================================
+function selectNode(d) {
+  selectedNode = d;
+  
+  // Highlight
+  g.selectAll('.nodes circle')
+    .attr('opacity', n => n.id === d.id ? 1 : 0.3);
+  g.selectAll('.links line')
+    .attr('opacity', l => l.source.id === d.id || l.target.id === d.id ? 1 : 0.1);
+  
+  // Show detail
+  showDetail(d);
+}
+
+function showDetail(d) {
+  const panel = document.getElementById('detailPanel');
+  const title = document.getElementById('detailTitle');
+  const content = document.getElementById('detailContent');
+  
+  panel.classList.add('open');
+  title.textContent = d.name;
+  
+  const connections = graphData.links.filter(l => 
+    l.source.id === d.id || l.target.id === d.id
+  );
+  
+  let html = `
+    <div class="detail-section">
+      <div class="detail-section-title">基本信息</div>
+      <div class="detail-row">
+        <span class="detail-label">类型</span>
+        <span class="detail-value" style="color:${typeColors[d.type]}">${typeLabels[d.type] || d.type}</span>
+      </div>
+      ${d.description ? `<div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">${d.description}</span></div>` : ''}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">关联 (${connections.length})</div>
+  `;
+  
+  connections.forEach(c => {
+    const isSource = c.source.id === d.id;
+    const other = isSource ? c.target : c.source;
+    const direction = isSource ? '→' : '←';
+    
+    html += `
+      <div class="connection-item" onclick="selectNode(graphData.nodes.find(n => n.id === '${other.id}'))">
+        <div class="connection-dot" style="background:${typeColors[other.type]}"></div>
+        <span class="connection-name">${other.name}</span>
+        <span class="connection-type">${direction} ${c.type}</span>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+  selectedNode = null;
+  
+  g.selectAll('.nodes circle').attr('opacity', 1);
+  g.selectAll('.links line').attr('opacity', 1);
+}
+
+// ============================================================
+// Entity & Relation Lists
+// ============================================================
+function updateEntityList() {
+  const list = document.getElementById('entityList');
+  
+  if (graphData.nodes.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        <p>暂无实体数据</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Count connections
+  const connectionCount = {};
+  graphData.links.forEach(l => {
+    connectionCount[l.source.id || l.source] = (connectionCount[l.source.id || l.source] || 0) + 1;
+    connectionCount[l.target.id || l.target] = (connectionCount[l.target.id || l.target] || 0) + 1;
+  });
+  
+  list.innerHTML = graphData.nodes.map(n => `
+    <div class="entity-item ${selectedNode?.id === n.id ? 'active' : ''}" onclick="selectNode(graphData.nodes.find(node => node.id === '${n.id}'))">
+      <div class="entity-dot" style="background:${typeColors[n.type]}"></div>
+      <div class="entity-info">
+        <div class="entity-name">${n.name}</div>
+        <div class="entity-type">${typeLabels[n.type] || n.type}</div>
+      </div>
+      <div class="entity-count">${connectionCount[n.id] || 0}</div>
+    </div>
+  `).join('');
+}
+
+function updateRelationList() {
+  const list = document.getElementById('relationList');
+  
+  if (graphData.links.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+        </svg>
+        <p>暂无关系数据</p>
+      </div>
+    `;
+    return;
+  }
+  
+  list.innerHTML = graphData.links.map(l => {
+    const sourceName = l.source.name || l.source;
+    const targetName = l.target.name || l.target;
+    return `
+      <div class="relation-item" onclick="highlightRelation('${sourceName}', '${targetName}')">
+        <div class="relation-header">
+          <span>${sourceName}</span>
+          <span class="relation-arrow">→</span>
+          <span>${targetName}</span>
+        </div>
+        <div style="margin-top:4px">
+          <span class="relation-type">${l.type}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function highlightRelation(source, target) {
+  g.selectAll('.links line')
+    .attr('opacity', l => {
+      const sName = l.source.name || l.source;
+      const tName = l.target.name || l.target;
+      return (sName === source && tName === target) ? 1 : 0.1;
+    });
+  
+  setTimeout(() => {
+    g.selectAll('.links line').attr('opacity', 1);
+  }, 2000);
+}
+
+// ============================================================
+// Tabs
+// ============================================================
+function switchTab(el) {
+  const tab = el.dataset.tab;
+  
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  el.classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+}
+
+// ============================================================
+// Search
+// ============================================================
+function initSearch() {
+  const input = document.getElementById('globalSearch');
+  const results = document.getElementById('searchResults');
+  
+  input.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    
+    if (query.length < 1) {
+      results.classList.remove('visible');
+      return;
+    }
+    
+    const matches = graphData.nodes.filter(n => 
+      n.name.toLowerCase().includes(query) || 
+      (n.description && n.description.toLowerCase().includes(query))
+    ).slice(0, 8);
+    
+    if (matches.length === 0) {
+      results.classList.remove('visible');
+      return;
+    }
+    
+    results.innerHTML = matches.map(n => `
+      <div class="search-result-item" onclick="selectSearchResult('${n.id}')">
+        <div class="entity-dot" style="background:${typeColors[n.type]}"></div>
+        <div>
+          <div style="font-size:13px">${n.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${typeLabels[n.type] || n.type}</div>
+        </div>
+      </div>
+    `).join('');
+    
+    results.classList.add('visible');
+  });
+  
+  input.addEventListener('blur', () => {
+    setTimeout(() => results.classList.remove('visible'), 200);
+  });
+}
+
+function selectSearchResult(id) {
+  const node = graphData.nodes.find(n => n.id === id);
+  if (node) {
+    selectNode(node);
+    
+    // Center on node
+    const container = document.getElementById('graphContainer');
+    const transform = d3.zoomIdentity
+      .translate(container.clientWidth / 2, container.clientHeight / 2)
+      .scale(1.5)
+      .translate(-node.x, -node.y);
+    
+    svg.transition().duration(500).call(zoom.transform, transform);
+  }
+  
+  document.getElementById('globalSearch').value = '';
+  document.getElementById('searchResults').classList.remove('visible');
+}
+
+// ============================================================
+// Layout
+// ============================================================
+function changeLayout(layout) {
+  currentLayout = layout;
+  renderGraph();
+}
+
+// ============================================================
+// Zoom Controls
+// ============================================================
+function zoomIn() {
+  svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+}
+
+function zoomOut() {
+  svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+}
+
+function resetZoom() {
+  const container = document.getElementById('graphContainer');
+  svg.transition().duration(500).call(
+    zoom.transform,
+    d3.zoomIdentity.translate(container.clientWidth / 2, container.clientHeight / 2).scale(1)
+  );
+}
+
+// ============================================================
+// Actions
+// ============================================================
+async function loadDemo() {
+  await API.post('/api/demo/load');
+  await loadData();
+}
+
+async function clearGraph() {
+  if (confirm('确定要清空所有图谱数据吗？')) {
+    await API.post('/api/clear');
+    await loadData();
+    closeDetail();
+  }
+}
+
+async function importText() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) return;
+  
+  const result = await API.post('/api/documents/ingest', {
+    text: text,
+    title: '手动导入'
+  });
+  
+  alert(`导入完成：提取了 ${result.entities_extracted} 个实体，${result.relations_extracted} 条关系`);
+  document.getElementById('importText').value = '';
+  await loadData();
+}
+
+// ============================================================
+// Click outside to deselect
+// ============================================================
+document.getElementById('graphContainer').addEventListener('click', (e) => {
+  if (e.target.tagName === 'svg' || e.target.tagName === 'SVG') {
+    closeDetail();
   }
 });
 
-app.mount('#app');
+// Init
+init();
 </script>
 </body>
 </html>

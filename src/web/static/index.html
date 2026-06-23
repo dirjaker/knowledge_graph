@@ -3,339 +3,994 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>知识图谱管理面板</title>
+<title>知识图谱</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--text2:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+:root{
+  --bg-primary:#0a0a0f;
+  --bg-secondary:#12121a;
+  --bg-tertiary:#1a1a25;
+  --bg-elevated:#222230;
+  --border:#2a2a3a;
+  --border-subtle:#1e1e2e;
+  --text-primary:#e8e8ed;
+  --text-secondary:#8888a0;
+  --text-muted:#555570;
+  --accent:#6366f1;
+  --accent-hover:#818cf8;
+  --accent-muted:rgba(99,102,241,0.15);
+  --green:#22c55e;
+  --green-muted:rgba(34,197,94,0.15);
+  --red:#ef4444;
+  --red-muted:rgba(239,68,68,0.15);
+  --yellow:#eab308;
+  --yellow-muted:rgba(234,179,8,0.15);
+  --cyan:#06b6d4;
+  --cyan-muted:rgba(6,182,212,0.15);
+  --purple:#a855f7;
+  --purple-muted:rgba(168,85,247,0.15);
+  --orange:#f97316;
+  --orange-muted:rgba(249,115,22,0.15);
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+  --radius:10px;
+  --radius-sm:6px;
+  --transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow:hidden}
 
-.header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
-.header h1{font-size:20px;font-weight:600;color:var(--accent)}
-.header .actions{display:flex;gap:8px}
+/* Layout */
+.app{display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:56px 1fr;height:100vh}
+.header{grid-column:1/-1;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:100}
+.left-panel{background:var(--bg-secondary);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.center{position:relative;overflow:hidden}
+.right-panel{background:var(--bg-secondary);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transform:translateX(100%);transition:transform 0.3s ease}
+.right-panel.open{transform:translateX(0)}
 
-.layout{display:flex;min-height:calc(100vh - 56px)}
-.sidebar{width:320px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
-.sidebar-tabs{display:flex;border-bottom:1px solid var(--border)}
-.sidebar-tab{flex:1;padding:10px;text-align:center;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);transition:all 0.15s}
-.sidebar-tab.active{color:var(--accent);border-color:var(--accent)}
-.tab-panel{display:none;flex:1;overflow-y:auto;padding:14px}
-.tab-panel.active{display:block}
+/* Header */
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--accent)}
+.logo svg{width:24px;height:24px}
+.header-center{flex:1;display:flex;justify-content:center}
+.search-global{width:400px;position:relative}
+.search-global input{width:100%;padding:8px 12px 8px 36px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:13px;outline:none;transition:var(--transition)}
+.search-global input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-muted)}
+.search-global svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted)}
+.header-actions{display:flex;gap:8px}
 
-.main{flex:1;padding:24px;overflow-y:auto}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-tertiary);color:var(--text-primary);font-size:13px;font-weight:500;cursor:pointer;transition:var(--transition);white-space:nowrap}
+.btn:hover{background:var(--bg-elevated);border-color:var(--text-muted)}
+.btn-icon{padding:7px;border:none;background:transparent;color:var(--text-secondary)}
+.btn-icon:hover{color:var(--text-primary);background:var(--bg-tertiary)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover)}
+.btn-ghost{background:transparent;border-color:transparent}
+.btn-ghost:hover{background:var(--bg-tertiary)}
+.btn-sm{padding:5px 10px;font-size:12px}
 
-.btn{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;transition:all 0.15s}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn-primary:hover{opacity:0.85}
-.btn-danger{color:var(--red);border-color:var(--red)}
-.btn-sm{padding:3px 10px;font-size:12px}
+/* Stats Bar */
+.stats-bar{display:flex;gap:1px;background:var(--border-subtle);border-bottom:1px solid var(--border)}
+.stat{flex:1;padding:12px 16px;background:var(--bg-secondary);text-align:center}
+.stat-value{font-size:20px;font-weight:700;color:var(--accent)}
+.stat-label{font-size:11px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
 
-.form-input{width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;outline:none;margin-bottom:8px}
-.form-input:focus{border-color:var(--accent)}
-textarea.form-input{min-height:70px;resize:vertical;font-family:inherit}
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg-secondary)}
+.tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;transition:var(--transition)}
+.tab:hover{color:var(--text-secondary)}
+.tab.active{color:var(--accent);border-color:var(--accent)}
+.tab-content{flex:1;overflow-y:auto;display:none}
+.tab-content.active{display:block}
 
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
-.stat-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
-.stat-value{font-size:24px;font-weight:700;color:var(--accent)}
-.stat-label{font-size:12px;color:var(--text2);margin-top:4px}
+/* Entity List */
+.entity-list{padding:8px}
+.entity-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);margin-bottom:2px}
+.entity-item:hover{background:var(--bg-tertiary)}
+.entity-item.active{background:var(--accent-muted)}
+.entity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.entity-info{flex:1;min-width:0}
+.entity-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.entity-type{font-size:11px;color:var(--text-muted)}
+.entity-count{font-size:11px;color:var(--text-muted);background:var(--bg-tertiary);padding:2px 6px;border-radius:4px}
 
-.entity-list,.relation-list{list-style:none}
-.entity-item,.relation-item{padding:8px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:13px;cursor:pointer;transition:border-color 0.15s;display:flex;align-items:center;justify-content:space-between}
-.entity-item:hover,.relation-item:hover{border-color:var(--accent)}
+/* Relation List */
+.relation-list{padding:8px}
+.relation-item{padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);margin-bottom:2px}
+.relation-item:hover{background:var(--bg-tertiary)}
+.relation-header{display:flex;align-items:center;gap:8px;font-size:13px}
+.relation-arrow{color:var(--text-muted);font-size:11px}
+.relation-type{font-size:11px;color:var(--accent);background:var(--accent-muted);padding:2px 6px;border-radius:4px}
 
-.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500;margin-right:8px}
-.badge-person{background:#da3633;color:#fff}
-.badge-organization{background:#1f6feb;color:#fff}
-.badge-location{background:#238636;color:#fff}
-.badge-technology{background:#d29922;color:#fff}
-.badge-concept{background:#8957e5;color:#fff}
-.badge-other{background:#484f58;color:#fff}
+/* Import Panel */
+.import-panel{padding:16px}
+.import-textarea{width:100%;min-height:200px;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;font-family:inherit;resize:vertical;outline:none;transition:var(--transition)}
+.import-textarea:focus{border-color:var(--accent)}
+.import-actions{display:flex;gap:8px;margin-top:12px}
 
-.search-box{margin-bottom:12px}
+/* Graph Container */
+.graph-container{width:100%;height:100%;background:var(--bg-primary)}
+.graph-container svg{width:100%;height:100%}
 
-.detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px}
-.detail-panel h3{color:var(--accent);margin-bottom:12px;font-size:16px}
-.detail-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(48,54,61,0.5);font-size:13px}
-.detail-label{color:var(--text2)}
+/* Graph Controls */
+.graph-controls{position:absolute;bottom:20px;right:20px;display:flex;flex-direction:column;gap:4px}
+.graph-controls .btn{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center}
 
-.query-area{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px}
-.query-result{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto}
+/* Graph Info */
+.graph-info{position:absolute;top:16px;left:16px;display:flex;gap:8px}
+.info-badge{padding:6px 12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text-secondary);backdrop-filter:blur(10px)}
 
-.algorithm-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.algo-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color 0.15s}
-.algo-card:hover{border-color:var(--accent)}
-.algo-card h4{color:var(--accent);margin-bottom:6px;font-size:14px}
-.algo-card p{font-size:12px;color:var(--text2)}
+/* Layout Selector */
+.layout-selector{position:absolute;top:16px;right:16px}
+.layout-selector select{padding:6px 10px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;cursor:pointer}
 
-.algo-result{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;margin-top:12px;font-size:13px;max-height:300px;overflow-y:auto}
-.algo-result table{width:100%;border-collapse:collapse}
-.algo-result th,.algo-result td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
-.algo-result th{color:var(--text2);font-weight:500}
+/* Detail Panel */
+.detail-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.detail-title{font-size:15px;font-weight:600}
+.detail-close{cursor:pointer;color:var(--text-muted);transition:var(--transition)}
+.detail-close:hover{color:var(--text-primary)}
+.detail-content{flex:1;overflow-y:auto;padding:16px 20px}
+.detail-section{margin-bottom:20px}
+.detail-section-title{font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px}
+.detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-subtle)}
+.detail-label{font-size:12px;color:var(--text-muted)}
+.detail-value{font-size:13px;font-weight:500}
 
-.empty{text-align:center;padding:24px;color:var(--text2);font-size:13px}
-.footer{text-align:center;padding:16px;color:var(--text2);font-size:12px}
+/* Connections */
+.connection-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition)}
+.connection-item:hover{background:var(--bg-tertiary)}
+.connection-dot{width:6px;height:6px;border-radius:50%}
+.connection-name{font-size:12px;flex:1}
+.connection-type{font-size:10px;color:var(--text-muted);background:var(--bg-tertiary);padding:2px 6px;border-radius:4px}
+
+/* Type Colors */
+.type-person{background:var(--red)}
+.type-organization{background:var(--accent)}
+.type-location{background:var(--green)}
+.type-technology{background:var(--yellow)}
+.type-concept{background:var(--purple)}
+.type-event{background:var(--cyan)}
+.type-product{background:var(--orange)}
+.type-other{background:var(--text-muted)}
+
+/* Tooltip */
+.tooltip{position:absolute;padding:8px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text-primary);pointer-events:none;opacity:0;transition:opacity 0.15s;z-index:1000;box-shadow:var(--shadow)}
+.tooltip.visible{opacity:1}
+
+/* Empty State */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted)}
+.empty-state svg{width:48px;height:48px;margin-bottom:16px;opacity:0.5}
+.empty-state p{font-size:13px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+/* Animation */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn 0.2s ease}
+
+/* Search Results */
+.search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:4px;max-height:300px;overflow-y:auto;display:none;box-shadow:var(--shadow)}
+.search-results.visible{display:block}
+.search-result-item{padding:10px 12px;cursor:pointer;transition:var(--transition);display:flex;align-items:center;gap:10px}
+.search-result-item:hover{background:var(--bg-tertiary)}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>知识图谱管理面板</h1>
-  <div class="actions">
-    <button class="btn btn-primary btn-sm" onclick="loadDemo()">加载示例数据</button>
-    <button class="btn btn-danger btn-sm" onclick="clearGraph()">清空图谱</button>
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <circle cx="4" cy="6" r="2"/>
+        <circle cx="20" cy="6" r="2"/>
+        <circle cx="4" cy="18" r="2"/>
+        <circle cx="20" cy="18" r="2"/>
+        <line x1="9.5" y1="10" x2="5.5" y2="7.5"/>
+        <line x1="14.5" y1="10" x2="18.5" y2="7.5"/>
+        <line x1="9.5" y1="14" x2="5.5" y2="16.5"/>
+        <line x1="14.5" y1="14" x2="18.5" y2="16.5"/>
+      </svg>
+      知识图谱
+    </div>
+    <div class="header-center">
+      <div class="search-global">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="搜索实体、关系..." id="globalSearch" autocomplete="off">
+        <div class="search-results" id="searchResults"></div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-sm" onclick="loadDemo()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+        </svg>
+        示例数据
+      </button>
+      <button class="btn btn-sm btn-icon" onclick="clearGraph()" title="清空图谱">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Left Panel -->
+  <div class="left-panel">
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-value" id="statNodes">0</div>
+        <div class="stat-label">节点</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statEdges">0</div>
+        <div class="stat-label">边</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="statComponents">0</div>
+        <div class="stat-label">连通分量</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="entities" onclick="switchTab(this)">实体</div>
+      <div class="tab" data-tab="relations" onclick="switchTab(this)">关系</div>
+      <div class="tab" data-tab="import" onclick="switchTab(this)">导入</div>
+    </div>
+
+    <div id="tab-entities" class="tab-content active">
+      <div class="entity-list" id="entityList">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+          </svg>
+          <p>暂无实体数据</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-relations" class="tab-content">
+      <div class="relation-list" id="relationList">
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+          </svg>
+          <p>暂无关系数据</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-import" class="tab-content">
+      <div class="import-panel">
+        <textarea class="import-textarea" id="importText" placeholder="输入文本，系统将自动提取实体和关系..."></textarea>
+        <div class="import-actions">
+          <button class="btn btn-primary" onclick="importText()" style="flex:1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            导入
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center - Graph -->
+  <div class="center">
+    <div class="graph-container" id="graphContainer">
+      <div class="empty-state" id="graphEmpty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <circle cx="4" cy="6" r="2"/>
+          <circle cx="20" cy="6" r="2"/>
+          <circle cx="4" cy="18" r="2"/>
+          <circle cx="20" cy="18" r="2"/>
+        </svg>
+        <p>加载示例数据或导入文本开始</p>
+      </div>
+    </div>
+    <div class="graph-info" id="graphInfo" style="display:none">
+      <div class="info-badge">缩放: <span id="zoomLevel">100%</span></div>
+      <div class="info-badge">节点: <span id="visibleNodes">0</span></div>
+    </div>
+    <div class="layout-selector">
+      <select id="layoutSelect" onchange="changeLayout(this.value)">
+        <option value="force">力导向布局</option>
+        <option value="circular">环形布局</option>
+        <option value="grid">网格布局</option>
+      </select>
+    </div>
+    <div class="graph-controls">
+      <button class="btn btn-icon" onclick="zoomIn()" title="放大">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+      <button class="btn btn-icon" onclick="zoomOut()" title="缩小">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
+      <button class="btn btn-icon" onclick="resetZoom()" title="重置">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Right Panel - Detail -->
+  <div class="right-panel" id="detailPanel">
+    <div class="detail-header">
+      <div class="detail-title" id="detailTitle">详情</div>
+      <div class="detail-close" onclick="closeDetail()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </div>
+    </div>
+    <div class="detail-content" id="detailContent"></div>
   </div>
 </div>
 
-<div class="layout">
-  <div class="sidebar">
-    <div class="sidebar-tabs">
-      <div class="sidebar-tab active" data-tab="entities" onclick="switchTab(this)">实体</div>
-      <div class="sidebar-tab" data-tab="relations" onclick="switchTab(this)">关系</div>
-      <div class="sidebar-tab" data-tab="import" onclick="switchTab(this)">导入</div>
-    </div>
-
-    <div id="tab-entities" class="tab-panel active">
-      <div class="search-box">
-        <input class="form-input" id="entity-search" placeholder="搜索实体..." oninput="searchEntities(this.value)">
-      </div>
-      <ul class="entity-list" id="entity-list">
-        <li class="empty">加载中...</li>
-      </ul>
-    </div>
-
-    <div id="tab-relations" class="tab-panel">
-      <ul class="relation-list" id="relation-list">
-        <li class="empty">加载中...</li>
-      </ul>
-    </div>
-
-    <div id="tab-import" class="tab-panel">
-      <textarea class="form-input" id="import-text" placeholder="输入文本，自动抽取实体和关系..."></textarea>
-      <input class="form-input" id="import-title" placeholder="标题（可选）">
-      <button class="btn btn-primary" onclick="importText()" style="width:100%">导入文本</button>
-      <div id="import-result" style="margin-top:12px;font-size:12px;color:var(--text2)"></div>
-    </div>
-  </div>
-
-  <div class="main">
-    <!-- 统计 -->
-    <div class="stats-grid" id="stats-grid">
-      <div class="stat-item"><div class="stat-value" id="s-entities">-</div><div class="stat-label">实体数量</div></div>
-      <div class="stat-item"><div class="stat-value" id="s-relations">-</div><div class="stat-label">关系数量</div></div>
-      <div class="stat-item"><div class="stat-value" id="s-density">-</div><div class="stat-label">图密度</div></div>
-      <div class="stat-item"><div class="stat-value" id="s-components">-</div><div class="stat-label">连通分量</div></div>
-    </div>
-
-    <!-- 实体详情 -->
-    <div class="detail-panel" id="entity-detail" style="display:none">
-      <h3 id="detail-name">-</h3>
-      <div class="detail-row"><span class="detail-label">类型</span><span id="detail-type">-</span></div>
-      <div class="detail-row"><span class="detail-label">描述</span><span id="detail-desc">-</span></div>
-      <div class="detail-row"><span class="detail-label">置信度</span><span id="detail-conf">-</span></div>
-      <div class="detail-row"><span class="detail-label">关系数</span><span id="detail-rels">-</span></div>
-    </div>
-
-    <!-- 自然语言查询 -->
-    <div class="query-area">
-      <h3 style="color:var(--accent);margin-bottom:12px">自然语言查询</h3>
-      <div style="display:flex;gap:8px">
-        <input class="form-input" id="query-input" placeholder="输入问题，如: 张三和阿里巴巴是什么关系？" style="margin-bottom:0;flex:1">
-        <button class="btn btn-primary" onclick="queryGraph()">查询</button>
-      </div>
-      <div class="query-result" id="query-result" style="display:none"></div>
-    </div>
-
-    <!-- 图算法 -->
-    <h3 style="color:var(--accent);margin-bottom:12px">图算法分析</h3>
-    <div class="algorithm-cards">
-      <div class="algo-card" onclick="runAlgo('degree')">
-        <h4>度中心性</h4>
-        <p>找出连接数最多的节点</p>
-      </div>
-      <div class="algo-card" onclick="runAlgo('betweenness')">
-        <h4>介数中心性</h4>
-        <p>找出最重要的桥梁节点</p>
-      </div>
-      <div class="algo-card" onclick="runAlgo('closeness')">
-        <h4>接近中心性</h4>
-        <p>找出最中心的节点</p>
-      </div>
-      <div class="algo-card" onclick="runAlgo('pagerank')">
-        <h4>PageRank</h4>
-        <p>找出最重要的节点</p>
-      </div>
-      <div class="algo-card" onclick="runAlgo('communities')">
-        <h4>社区发现</h4>
-        <p>检测图中的社区结构</p>
-      </div>
-      <div class="algo-card" onclick="runAlgo('important')">
-        <h4>综合重要节点</h4>
-        <p>多维度重要性分析</p>
-      </div>
-    </div>
-    <div class="algo-result" id="algo-result" style="display:none"></div>
-  </div>
-</div>
-
-<div class="footer">知识图谱系统 -- 管理面板</div>
+<div class="tooltip" id="tooltip"></div>
 
 <script>
-const API = '';
+// ============================================================
+// State
+// ============================================================
+let graphData = { nodes: [], links: [] };
+let simulation = null;
+let svg, g, zoom;
+let selectedNode = null;
+let currentLayout = 'force';
 
-function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+const typeColors = {
+  person: '#ef4444',
+  organization: '#6366f1',
+  location: '#22c55e',
+  technology: '#eab308',
+  concept: '#a855f7',
+  event: '#06b6d4',
+  product: '#f97316',
+  other: '#8888a0'
+};
 
-function switchTab(el){
-  document.querySelectorAll('.sidebar-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('tab-'+el.dataset.tab).classList.add('active');
+const typeLabels = {
+  person: '人物',
+  organization: '组织',
+  location: '地点',
+  technology: '技术',
+  concept: '概念',
+  event: '事件',
+  product: '产品',
+  other: '其他'
+};
+
+// ============================================================
+// API
+// ============================================================
+const API = {
+  async get(url) {
+    const res = await fetch(url);
+    return res.json();
+  },
+  async post(url, data) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  async del(url) {
+    const res = await fetch(url, { method: 'DELETE' });
+    return res.json();
+  }
+};
+
+// ============================================================
+// Init
+// ============================================================
+function init() {
+  initGraph();
+  loadData();
+  initSearch();
 }
 
-async function loadStats(){
-  try{
-    const res=await fetch(API+'/api/stats');
-    const d=await res.json();
-    document.getElementById('s-entities').textContent=d.entity_count||0;
-    document.getElementById('s-relations').textContent=d.relation_count||0;
-    document.getElementById('s-density').textContent=d.density!=null?d.density.toFixed(4):'-';
-    document.getElementById('s-components').textContent=d.components||0;
-  }catch(e){console.error(e)}
+function initGraph() {
+  const container = document.getElementById('graphContainer');
+  svg = d3.select(container).append('svg');
+  
+  // Zoom
+  zoom = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', (e) => {
+      g.attr('transform', e.transform);
+      document.getElementById('zoomLevel').textContent = Math.round(e.transform.k * 100) + '%';
+    });
+  
+  svg.call(zoom);
+  
+  g = svg.append('g');
+  
+  // Resize
+  const resize = () => {
+    const { width, height } = container.getBoundingClientRect();
+    svg.attr('width', width).attr('height', height);
+  };
+  resize();
+  window.addEventListener('resize', resize);
 }
 
-async function loadEntities(){
-  try{
-    const res=await fetch(API+'/api/entities?limit=200');
-    const data=await res.json();
-    renderEntities(data);
-  }catch(e){console.error(e)}
+// ============================================================
+// Data Loading
+// ============================================================
+async function loadData() {
+  const [entities, relations, stats] = await Promise.all([
+    API.get('/api/entities'),
+    API.get('/api/relations'),
+    API.get('/api/stats').catch(() => ({ total_entities: 0, total_relations: 0, components: 0 }))
+  ]);
+  
+  // Update stats
+  document.getElementById('statNodes').textContent = stats.total_entities || entities.length;
+  document.getElementById('statEdges').textContent = stats.total_relations || relations.length;
+  document.getElementById('statComponents').textContent = stats.components || 0;
+  
+  // Build graph data
+  const nodeMap = new Map();
+  entities.forEach(e => {
+    nodeMap.set(e.name, {
+      id: e.name,
+      name: e.name,
+      type: e.entity_type,
+      description: e.description,
+      properties: e.properties
+    });
+  });
+  
+  const links = relations.map(r => ({
+    source: r.source_entity,
+    target: r.target_entity,
+    type: r.relation_type,
+    weight: r.weight,
+    evidence: r.evidence
+  })).filter(l => nodeMap.has(l.source) && nodeMap.has(l.target));
+  
+  graphData = {
+    nodes: Array.from(nodeMap.values()),
+    links: links
+  };
+  
+  updateEntityList();
+  updateRelationList();
+  renderGraph();
 }
 
-function renderEntities(data){
-  const list=document.getElementById('entity-list');
-  if(!data.length){list.innerHTML='<li class="empty">暂无实体</li>';return}
-  list.innerHTML=data.map(e=>`
-    <li class="entity-item" onclick="showEntityDetail('${esc(e.name)}')">
-      <div><span class="badge badge-${esc(e.entity_type)}">${esc(e.entity_type)}</span>${esc(e.name)}</div>
-      <span style="font-size:11px;color:var(--text2)">${(e.confidence||0).toFixed(2)}</span>
-    </li>
+// ============================================================
+// Graph Rendering
+// ============================================================
+function renderGraph() {
+  const container = document.getElementById('graphContainer');
+  const emptyState = document.getElementById('graphEmpty');
+  const graphInfo = document.getElementById('graphInfo');
+  
+  if (graphData.nodes.length === 0) {
+    emptyState.style.display = 'flex';
+    graphInfo.style.display = 'none';
+    g.selectAll('*').remove();
+    return;
+  }
+  
+  emptyState.style.display = 'none';
+  graphInfo.style.display = 'flex';
+  document.getElementById('visibleNodes').textContent = graphData.nodes.length;
+  
+  // Clear
+  g.selectAll('*').remove();
+  
+  // Arrow marker
+  svg.append('defs').append('marker')
+    .attr('id', 'arrowhead')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-5L10,0L0,5')
+    .attr('fill', '#555570');
+  
+  // Links
+  const link = g.append('g')
+    .attr('class', 'links')
+    .selectAll('line')
+    .data(graphData.links)
+    .join('line')
+    .attr('stroke', '#2a2a3a')
+    .attr('stroke-width', d => Math.max(1, d.weight || 1))
+    .attr('marker-end', 'url(#arrowhead)');
+  
+  // Link labels
+  const linkLabel = g.append('g')
+    .attr('class', 'link-labels')
+    .selectAll('text')
+    .data(graphData.links)
+    .join('text')
+    .text(d => d.type)
+    .attr('font-size', '10px')
+    .attr('fill', '#555570')
+    .attr('text-anchor', 'middle');
+  
+  // Nodes
+  const node = g.append('g')
+    .attr('class', 'nodes')
+    .selectAll('g')
+    .data(graphData.nodes)
+    .join('g')
+    .call(d3.drag()
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended));
+  
+  // Node circles
+  node.append('circle')
+    .attr('r', d => getNodeRadius(d))
+    .attr('fill', d => typeColors[d.type] || typeColors.other)
+    .attr('stroke', '#0a0a0f')
+    .attr('stroke-width', 2)
+    .on('mouseover', showTooltip)
+    .on('mouseout', hideTooltip)
+    .on('click', (e, d) => {
+      e.stopPropagation();
+      selectNode(d);
+    });
+  
+  // Node labels
+  node.append('text')
+    .text(d => d.name)
+    .attr('font-size', '11px')
+    .attr('fill', '#e8e8ed')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => getNodeRadius(d) + 14)
+    .style('pointer-events', 'none');
+  
+  // Simulation
+  if (currentLayout === 'force') {
+    simulation = d3.forceSimulation(graphData.nodes)
+      .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(100))
+      .force('charge', d3.forceManyBody().strength(-300))
+      .force('center', d3.forceCenter(
+        container.clientWidth / 2,
+        container.clientHeight / 2
+      ))
+      .force('collision', d3.forceCollide().radius(30));
+    
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
+      
+      linkLabel
+        .attr('x', d => (d.source.x + d.target.x) / 2)
+        .attr('y', d => (d.source.y + d.target.y) / 2);
+      
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+  } else if (currentLayout === 'circular') {
+    const radius = Math.min(container.clientWidth, container.clientHeight) / 3;
+    const angleStep = (2 * Math.PI) / graphData.nodes.length;
+    
+    graphData.nodes.forEach((d, i) => {
+      d.x = container.clientWidth / 2 + radius * Math.cos(i * angleStep);
+      d.y = container.clientHeight / 2 + radius * Math.sin(i * angleStep);
+    });
+    
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    
+    linkLabel
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2);
+    
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  } else if (currentLayout === 'grid') {
+    const cols = Math.ceil(Math.sqrt(graphData.nodes.length));
+    const spacing = 80;
+    const startX = (container.clientWidth - (cols - 1) * spacing) / 2;
+    const startY = 100;
+    
+    graphData.nodes.forEach((d, i) => {
+      d.x = startX + (i % cols) * spacing;
+      d.y = startY + Math.floor(i / cols) * spacing;
+    });
+    
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    
+    linkLabel
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2);
+    
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  }
+  
+  // Fit to screen
+  setTimeout(() => {
+    const bounds = g.node().getBBox();
+    const fullWidth = container.clientWidth;
+    const fullHeight = container.clientHeight;
+    const width = bounds.width;
+    const height = bounds.height;
+    const midX = bounds.x + width / 2;
+    const midY = bounds.y + height / 2;
+    
+    if (width > 0 && height > 0) {
+      const scale = 0.8 / Math.max(width / fullWidth, height / fullHeight);
+      const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+      
+      svg.transition().duration(500).call(
+        zoom.transform,
+        d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+      );
+    }
+  }, 500);
+}
+
+function getNodeRadius(d) {
+  const connections = graphData.links.filter(l => 
+    l.source.id === d.id || l.target.id === d.id
+  ).length;
+  return Math.max(12, Math.min(20, 8 + connections * 2));
+}
+
+// ============================================================
+// Drag
+// ============================================================
+function dragstarted(event, d) {
+  if (simulation) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(event, d) {
+  d.fx = event.x;
+  d.fy = event.y;
+}
+
+function dragended(event, d) {
+  if (simulation) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
+
+// ============================================================
+// Tooltip
+// ============================================================
+function showTooltip(event, d) {
+  const tooltip = document.getElementById('tooltip');
+  const type = typeLabels[d.type] || d.type;
+  tooltip.innerHTML = `<strong>${d.name}</strong><br><span style="color:${typeColors[d.type]}">${type}</span>`;
+  tooltip.style.left = (event.pageX + 10) + 'px';
+  tooltip.style.top = (event.pageY - 10) + 'px';
+  tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+// ============================================================
+// Selection
+// ============================================================
+function selectNode(d) {
+  selectedNode = d;
+  
+  // Highlight
+  g.selectAll('.nodes circle')
+    .attr('opacity', n => n.id === d.id ? 1 : 0.3);
+  g.selectAll('.links line')
+    .attr('opacity', l => l.source.id === d.id || l.target.id === d.id ? 1 : 0.1);
+  
+  // Show detail
+  showDetail(d);
+}
+
+function showDetail(d) {
+  const panel = document.getElementById('detailPanel');
+  const title = document.getElementById('detailTitle');
+  const content = document.getElementById('detailContent');
+  
+  panel.classList.add('open');
+  title.textContent = d.name;
+  
+  const connections = graphData.links.filter(l => 
+    l.source.id === d.id || l.target.id === d.id
+  );
+  
+  let html = `
+    <div class="detail-section">
+      <div class="detail-section-title">基本信息</div>
+      <div class="detail-row">
+        <span class="detail-label">类型</span>
+        <span class="detail-value" style="color:${typeColors[d.type]}">${typeLabels[d.type] || d.type}</span>
+      </div>
+      ${d.description ? `<div class="detail-row"><span class="detail-label">描述</span><span class="detail-value">${d.description}</span></div>` : ''}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">关联 (${connections.length})</div>
+  `;
+  
+  connections.forEach(c => {
+    const isSource = c.source.id === d.id;
+    const other = isSource ? c.target : c.source;
+    const direction = isSource ? '→' : '←';
+    
+    html += `
+      <div class="connection-item" onclick="selectNode(graphData.nodes.find(n => n.id === '${other.id}'))">
+        <div class="connection-dot" style="background:${typeColors[other.type]}"></div>
+        <span class="connection-name">${other.name}</span>
+        <span class="connection-type">${direction} ${c.type}</span>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  content.innerHTML = html;
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+  selectedNode = null;
+  
+  g.selectAll('.nodes circle').attr('opacity', 1);
+  g.selectAll('.links line').attr('opacity', 1);
+}
+
+// ============================================================
+// Entity & Relation Lists
+// ============================================================
+function updateEntityList() {
+  const list = document.getElementById('entityList');
+  
+  if (graphData.nodes.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        <p>暂无实体数据</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Count connections
+  const connectionCount = {};
+  graphData.links.forEach(l => {
+    connectionCount[l.source.id || l.source] = (connectionCount[l.source.id || l.source] || 0) + 1;
+    connectionCount[l.target.id || l.target] = (connectionCount[l.target.id || l.target] || 0) + 1;
+  });
+  
+  list.innerHTML = graphData.nodes.map(n => `
+    <div class="entity-item ${selectedNode?.id === n.id ? 'active' : ''}" onclick="selectNode(graphData.nodes.find(node => node.id === '${n.id}'))">
+      <div class="entity-dot" style="background:${typeColors[n.type]}"></div>
+      <div class="entity-info">
+        <div class="entity-name">${n.name}</div>
+        <div class="entity-type">${typeLabels[n.type] || n.type}</div>
+      </div>
+      <div class="entity-count">${connectionCount[n.id] || 0}</div>
+    </div>
   `).join('');
 }
 
-async function searchEntities(q){
-  if(!q){loadEntities();return}
-  try{
-    const res=await fetch(API+'/api/entities/search?q='+encodeURIComponent(q));
-    const data=await res.json();
-    renderEntities(data);
-  }catch(e){console.error(e)}
+function updateRelationList() {
+  const list = document.getElementById('relationList');
+  
+  if (graphData.links.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+        </svg>
+        <p>暂无关系数据</p>
+      </div>
+    `;
+    return;
+  }
+  
+  list.innerHTML = graphData.links.map(l => {
+    const sourceName = l.source.name || l.source;
+    const targetName = l.target.name || l.target;
+    return `
+      <div class="relation-item" onclick="highlightRelation('${sourceName}', '${targetName}')">
+        <div class="relation-header">
+          <span>${sourceName}</span>
+          <span class="relation-arrow">→</span>
+          <span>${targetName}</span>
+        </div>
+        <div style="margin-top:4px">
+          <span class="relation-type">${l.type}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
-async function loadRelations(){
-  try{
-    const res=await fetch(API+'/api/relations?limit=200');
-    const data=await res.json();
-    const list=document.getElementById('relation-list');
-    if(!data.length){list.innerHTML='<li class="empty">暂无关系</li>';return}
-    list.innerHTML=data.map(r=>`
-      <li class="relation-item">
-        <div style="flex:1"><strong>${esc(r.source)}</strong> <span style="color:var(--text2)">[${esc(r.type)}]</span> <strong>${esc(r.target)}</strong></div>
-        <span style="font-size:11px;color:var(--text2)">w:${r.weight}</span>
-      </li>
-    `).join('');
-  }catch(e){console.error(e)}
+function highlightRelation(source, target) {
+  g.selectAll('.links line')
+    .attr('opacity', l => {
+      const sName = l.source.name || l.source;
+      const tName = l.target.name || l.target;
+      return (sName === source && tName === target) ? 1 : 0.1;
+    });
+  
+  setTimeout(() => {
+    g.selectAll('.links line').attr('opacity', 1);
+  }, 2000);
 }
 
-async function showEntityDetail(name){
-  try{
-    const res=await fetch(API+'/api/entities/'+encodeURIComponent(name));
-    const d=await res.json();
-    const panel=document.getElementById('entity-detail');
-    panel.style.display='block';
-    document.getElementById('detail-name').textContent=d.name;
-    document.getElementById('detail-type').textContent=d.entity_type;
-    document.getElementById('detail-desc').textContent=d.description||'无';
-    document.getElementById('detail-conf').textContent=(d.confidence||0).toFixed(2);
-    document.getElementById('detail-rels').textContent=d.relations?d.relations.length:0;
-  }catch(e){console.error(e)}
+// ============================================================
+// Tabs
+// ============================================================
+function switchTab(el) {
+  const tab = el.dataset.tab;
+  
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  el.classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
 }
 
-async function queryGraph(){
-  const q=document.getElementById('query-input').value.trim();
-  if(!q)return;
-  const el=document.getElementById('query-result');
-  el.style.display='block';
-  el.textContent='查询中...';
-  try{
-    const res=await fetch(API+'/api/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
-    const d=await res.json();
-    let text='回答: '+d.answer+'\n\n';
-    if(d.entities&&d.entities.length)text+='相关实体: '+d.entities.map(e=>e.name).join(', ')+'\n';
-    if(d.path&&d.path.length)text+='推理路径: '+d.path.join(' -> ')+'\n';
-    text+='置信度: '+(d.confidence||0).toFixed(2);
-    el.textContent=text;
-  }catch(e){el.textContent='查询失败: '+e.message}
-}
-
-async function runAlgo(method){
-  const el=document.getElementById('algo-result');
-  el.style.display='block';
-  el.textContent='分析中...';
-  try{
-    let data;
-    if(method==='communities'){
-      const res=await fetch(API+'/api/algorithms/communities');
-      data=await res.json();
-      el.innerHTML='<pre>'+esc(JSON.stringify(data,null,2))+'</pre>';
-    }else if(method==='important'){
-      const res=await fetch(API+'/api/algorithms/important?top_k=10');
-      data=await res.json();
-      el.innerHTML='<pre>'+esc(JSON.stringify(data,null,2))+'</pre>';
-    }else{
-      const res=await fetch(API+'/api/algorithms/centrality?method='+method+'&top_k=10');
-      data=await res.json();
-      if(data.results&&data.results.length){
-        let html='<table><tr><th>排名</th><th>节点</th><th>得分</th></tr>';
-        data.results.forEach((r,i)=>{html+='<tr><td>'+(i+1)+'</td><td>'+esc(r[0]||r.name||'')+'</td><td>'+(r[1]||r.score||0).toFixed(4)+'</td></tr>'});
-        html+='</table>';
-        el.innerHTML=html;
-      }else{el.innerHTML='<pre>'+esc(JSON.stringify(data,null,2))+'</pre>'}
+// ============================================================
+// Search
+// ============================================================
+function initSearch() {
+  const input = document.getElementById('globalSearch');
+  const results = document.getElementById('searchResults');
+  
+  input.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    
+    if (query.length < 1) {
+      results.classList.remove('visible');
+      return;
     }
-  }catch(e){el.textContent='分析失败: '+e.message}
+    
+    const matches = graphData.nodes.filter(n => 
+      n.name.toLowerCase().includes(query) || 
+      (n.description && n.description.toLowerCase().includes(query))
+    ).slice(0, 8);
+    
+    if (matches.length === 0) {
+      results.classList.remove('visible');
+      return;
+    }
+    
+    results.innerHTML = matches.map(n => `
+      <div class="search-result-item" onclick="selectSearchResult('${n.id}')">
+        <div class="entity-dot" style="background:${typeColors[n.type]}"></div>
+        <div>
+          <div style="font-size:13px">${n.name}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${typeLabels[n.type] || n.type}</div>
+        </div>
+      </div>
+    `).join('');
+    
+    results.classList.add('visible');
+  });
+  
+  input.addEventListener('blur', () => {
+    setTimeout(() => results.classList.remove('visible'), 200);
+  });
 }
 
-async function importText(){
-  const text=document.getElementById('import-text').value.trim();
-  if(!text)return;
-  const title=document.getElementById('import-title').value.trim()||'text_input';
-  const el=document.getElementById('import-result');
-  el.textContent='导入中...';
-  try{
-    const res=await fetch(API+'/api/documents/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,title})});
-    const d=await res.json();
-    el.innerHTML='抽取实体: <strong>'+d.entities_extracted+'</strong> 个, 关系: <strong>'+d.relations_extracted+'</strong> 条';
-    loadEntities();loadRelations();loadStats();
-  }catch(e){el.textContent='导入失败: '+e.message}
+function selectSearchResult(id) {
+  const node = graphData.nodes.find(n => n.id === id);
+  if (node) {
+    selectNode(node);
+    
+    // Center on node
+    const container = document.getElementById('graphContainer');
+    const transform = d3.zoomIdentity
+      .translate(container.clientWidth / 2, container.clientHeight / 2)
+      .scale(1.5)
+      .translate(-node.x, -node.y);
+    
+    svg.transition().duration(500).call(zoom.transform, transform);
+  }
+  
+  document.getElementById('globalSearch').value = '';
+  document.getElementById('searchResults').classList.remove('visible');
 }
 
-async function loadDemo(){
-  try{
-    await fetch(API+'/api/demo/load',{method:'POST'});
-    loadEntities();loadRelations();loadStats();
-  }catch(e){alert('加载失败')}
+// ============================================================
+// Layout
+// ============================================================
+function changeLayout(layout) {
+  currentLayout = layout;
+  renderGraph();
 }
 
-async function clearGraph(){
-  if(!confirm('确定清空图谱？此操作不可恢复。'))return;
-  try{
-    await fetch(API+'/api/clear',{method:'POST'});
-    loadEntities();loadRelations();loadStats();
-    document.getElementById('entity-detail').style.display='none';
-  }catch(e){alert('清空失败')}
+// ============================================================
+// Zoom Controls
+// ============================================================
+function zoomIn() {
+  svg.transition().duration(300).call(zoom.scaleBy, 1.3);
 }
 
-// 初始化
-loadStats();loadEntities();loadRelations();
-setInterval(()=>{loadStats();},10000);
+function zoomOut() {
+  svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+}
+
+function resetZoom() {
+  const container = document.getElementById('graphContainer');
+  svg.transition().duration(500).call(
+    zoom.transform,
+    d3.zoomIdentity.translate(container.clientWidth / 2, container.clientHeight / 2).scale(1)
+  );
+}
+
+// ============================================================
+// Actions
+// ============================================================
+async function loadDemo() {
+  await API.post('/api/demo/load');
+  await loadData();
+}
+
+async function clearGraph() {
+  if (confirm('确定要清空所有图谱数据吗？')) {
+    await API.post('/api/clear');
+    await loadData();
+    closeDetail();
+  }
+}
+
+async function importText() {
+  const text = document.getElementById('importText').value.trim();
+  if (!text) return;
+  
+  const result = await API.post('/api/documents/ingest', {
+    text: text,
+    title: '手动导入'
+  });
+  
+  alert(`导入完成：提取了 ${result.entities_extracted} 个实体，${result.relations_extracted} 条关系`);
+  document.getElementById('importText').value = '';
+  await loadData();
+}
+
+// ============================================================
+// Click outside to deselect
+// ============================================================
+document.getElementById('graphContainer').addEventListener('click', (e) => {
+  if (e.target.tagName === 'svg' || e.target.tagName === 'SVG') {
+    closeDetail();
+  }
+});
+
+// Init
+init();
 </script>
 </body>
 </html>
