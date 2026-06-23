@@ -574,5 +574,65 @@ class Database:
         }
 
 
+
+    def list_documents(self) -> list:
+        """列出所有文档"""
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM documents ORDER BY created_at DESC"
+            ).fetchall()
+            return [
+                {
+                    "id": row["id"],
+                    "filename": row["title"],
+                    "status": "done",
+                    "entity_count": row["entity_count"],
+                    "relation_count": row["relation_count"],
+                    "created_at": row["created_at"],
+                }
+                for row in rows
+            ]
+
+    def get_document(self, doc_id: str):
+        """获取文档详情"""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM documents WHERE id=?", (doc_id,)
+            ).fetchone()
+            if row:
+                return {
+                    "id": row["id"],
+                    "filename": row["title"],
+                    "content": row["content"],
+                    "doc_type": row["doc_type"],
+                    "entity_count": row["entity_count"],
+                    "relation_count": row["relation_count"],
+                    "created_at": row["created_at"],
+                }
+        return None
+
+    def delete_document(self, doc_id: str) -> bool:
+        """删除文档"""
+        with self._conn() as conn:
+            cursor = conn.execute("DELETE FROM documents WHERE id=?", (doc_id,))
+            return cursor.rowcount > 0
+
+    def update_relation(self, source: str, target: str, relation_type: str):
+        """更新关系类型"""
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE relations SET relation_type=? WHERE source_entity=? AND target_entity=?",
+                (relation_type, source, target),
+            )
+
+    def delete_relation_by_entities(self, source: str, target: str):
+        """通过实体删除关系"""
+        with self._conn() as conn:
+            conn.execute(
+                "DELETE FROM relations WHERE source_entity=? AND target_entity=?",
+                (source, target),
+            )
+
+
 # 全局数据库实例
 db = Database()

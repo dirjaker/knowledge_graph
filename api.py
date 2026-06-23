@@ -206,14 +206,6 @@ async def ingest_confirm(request: ConfirmImportRequest):
     }
 
 
-@app.get("/api/documents/task/{task_id}")
-async def get_task(task_id: str):
-    """获取导入任务状态"""
-    task = db.get_ingest_task(task_id)
-    if not task:
-        raise HTTPException(404, "任务不存在")
-    return task
-
 
 @app.post("/api/documents/upload")
 async def upload_document(file: UploadFile = File(...)):
@@ -340,13 +332,6 @@ async def create_relation(request: RelationRequest):
     )
     return {"id": rel_id}
 
-
-@app.delete("/api/relations/{rel_id}")
-async def delete_relation(rel_id: str):
-    """删除关系"""
-    if db.delete_relation(rel_id):
-        return {"status": "deleted"}
-    raise HTTPException(404, f"关系不存在: {rel_id}")
 
 
 # ============================================================
@@ -582,3 +567,92 @@ async def health():
     """健康检查"""
     from datetime import datetime
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+
+# ============================================================
+# 文档管理 API
+# ============================================================
+
+@app.get("/api/documents")
+async def list_documents():
+    """列出所有文档"""
+    return db.list_documents()
+
+
+@app.get("/api/documents/{doc_id}")
+async def get_document(doc_id: str):
+    """获取文档详情"""
+    doc = db.get_document(doc_id)
+    if not doc:
+        raise HTTPException(404, "文档不存在")
+    return doc
+
+
+@app.delete("/api/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    """删除文档"""
+    if db.delete_document(doc_id):
+        return {"status": "deleted"}
+    raise HTTPException(404, "文档不存在")
+
+
+@app.put("/api/relations/{source}/{target}")
+async def update_relation_endpoint(source: str, target: str, request: dict):
+    """更新关系类型"""
+    rel_type = request.get("relation_type", "")
+    if rel_type:
+        db.update_relation(source, target, rel_type)
+    return {"status": "updated"}
+
+
+@app.delete("/api/relations/{source}/{target}")
+async def delete_relation_endpoint(source: str, target: str):
+    """删除关系"""
+    db.delete_relation_by_entities(source, target)
+    return {"status": "deleted"}
+
+
+@app.post("/api/demo/load")
+async def load_demo():
+    """加载示例数据"""
+    demo_entities = [
+        ("张三", "person", "阿里巴巴CEO"),
+        ("李四", "person", "腾讯副总裁"),
+        ("王五", "person", "北京大学教授"),
+        ("阿里巴巴", "organization", "中国电商巨头"),
+        ("腾讯", "organization", "中国互联网巨头"),
+        ("北京大学", "organization", "中国顶尖学府"),
+        ("杭州", "location", "浙江省会"),
+        ("深圳", "location", "科技之城"),
+        ("北京", "location", "中国首都"),
+        ("人工智能", "technology", "AI技术"),
+        ("机器学习", "concept", "ML算法"),
+    ]
+    for name, etype, desc in demo_entities:
+        db.add_entity(name, etype, desc)
+    
+    demo_relations = [
+        ("张三", "阿里巴巴", "任职于"),
+        ("张三", "杭州", "位于"),
+        ("李四", "腾讯", "任职于"),
+        ("李四", "深圳", "位于"),
+        ("王五", "北京大学", "任职于"),
+        ("王五", "北京", "位于"),
+        ("王五", "人工智能", "研究"),
+        ("王五", "机器学习", "研究"),
+        ("阿里巴巴", "杭州", "总部位于"),
+        ("腾讯", "深圳", "总部位于"),
+        ("北京大学", "北京", "位于"),
+        ("人工智能", "机器学习", "包含"),
+    ]
+    for src, tgt, rtype in demo_relations:
+        db.add_relation(src, tgt, rtype)
+    
+    return {"entities_loaded": len(demo_entities), "relations_loaded": len(demo_relations)}
+
+
+@app.post("/api/clear")
+async def clear_all():
+    """清空所有数据"""
+    db.clear_all()
+    return {"status": "cleared"}
