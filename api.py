@@ -11,10 +11,11 @@
 - 配置管理
 """
 
-import json
 import os
-import uuid
+import json
+import logging
 import threading
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -28,6 +29,8 @@ from database import db
 from llm_client import llm_client
 from config import get_config, update_config, get_llm_config
 from graph_algorithms import GraphAlgorithms
+
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # 初始化
@@ -222,43 +225,49 @@ async def ingest_confirm(request: ConfirmImportRequest):
 @app.post("/api/documents/upload")
 async def upload_document(file: UploadFile = File(...)):
     """上传文件并分析"""
-    # 保存文件
-    from config import UPLOAD_DIR
-    file_path = UPLOAD_DIR / file.filename
-    # 防止路径穿越：解析后必须在 UPLOAD_DIR 内
-    file_path = Path(os.path.realpath(file_path))
-    if not str(file_path).startswith(str(Path(os.path.realpath(UPLOAD_DIR)))):
-        raise HTTPException(400, "非法文件路径")
-    content = await file.read()
-    file_path.write_bytes(content)
-
-    # 解析文本
     try:
+        # 保存文件
+        from config import UPLOAD_DIR
+        filename = file.filename or "unnamed_file"
+        file_path = UPLOAD_DIR / filename
+        # 防止路径穿越：解析后必须在 UPLOAD_DIR 内
+        file_path = Path(os.path.realpath(file_path))
+        if not str(file_path).startswith(str(Path(os.path.realpath(UPLOAD_DIR)))):
+            raise HTTPException(400, "非法文件路径")
+        content = await file.read()
+        if not content:
+            raise HTTPException(400, "文件内容为空")
+        file_path.write_bytes(content)
+
+        # 解析文本
         from document_parser import DocumentParser
         doc = DocumentParser.parse(str(file_path))
         text = doc.content
+
+        # 创建任务
+        task_id = db.create_ingest_task("file", text, filename=filename)
+
+        def _process():
+            try:
+                result = llm_client.extract_knowledge(text)
+                if "error" in result:
+                    db.update_ingest_task(task_id, error=result["error"])
+                else:
+                    db.update_ingest_task(
+                        task_id, status="completed",
+                        entities=result.get("entities", []),
+                        relations=result.get("relations", []),
+                    )
+            except Exception as e:
+                db.update_ingest_task(task_id, error=str(e))
+
+        threading.Thread(target=_process, daemon=True).start()
+        return {"task_id": task_id, "filename": filename, "status": "processing"}
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(400, f"文件解析失败: {e}")
-
-    # 创建任务
-    task_id = db.create_ingest_task("file", text, filename=file.filename or "")
-
-    def _process():
-        try:
-            result = llm_client.extract_knowledge(text)
-            if "error" in result:
-                db.update_ingest_task(task_id, error=result["error"])
-            else:
-                db.update_ingest_task(
-                    task_id, status="completed",
-                    entities=result.get("entities", []),
-                    relations=result.get("relations", []),
-                )
-        except Exception as e:
-            db.update_ingest_task(task_id, error=str(e))
-
-    threading.Thread(target=_process, daemon=True).start()
-    return {"task_id": task_id, "filename": file.filename, "status": "processing"}
+        logger.error(f"上传文件失败: {e}")
+        raise HTTPException(500, f"上传文件失败: {e}")
 
 
 @app.get("/api/tasks/{task_id}")
