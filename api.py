@@ -227,7 +227,8 @@ async def upload_document(file: UploadFile = File(...)):
     file_path = UPLOAD_DIR / file.filename
     # 防止路径穿越：解析后必须在 UPLOAD_DIR 内
     file_path = Path(os.path.realpath(file_path))
-    assert str(file_path).startswith(str(Path(os.path.realpath(UPLOAD_DIR)))), "非法文件路径"
+    if not str(file_path).startswith(str(Path(os.path.realpath(UPLOAD_DIR)))):
+        raise HTTPException(400, "非法文件路径")
     content = await file.read()
     file_path.write_bytes(content)
 
