@@ -288,7 +288,7 @@ async def list_entities(
     keyword: str = "",
     entity_type: str = "",
     document_id: str = "",
-    limit: int = 100,
+    limit: int = 5000,
     offset: int = 0,
 ):
     """列出/搜索实体，支持按文档ID筛选"""
@@ -346,7 +346,7 @@ async def list_relations(
     entity: str = "",
     relation_type: str = "",
     document_id: str = "",
-    limit: int = 200,
+    limit: int = 5000,
 ):
     """列出关系，支持按文档ID筛选"""
     return db.get_relations(entity, relation_type, document_id, limit)

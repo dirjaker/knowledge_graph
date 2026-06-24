@@ -416,6 +416,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     </div>
     <div class="filter-tags" id="filterTags" style="display:none"></div>
     <div class="graph-info" id="graphInfo" style="display:none">
+      <div class="info-badge"><span id="filterIndicator" style="color:var(--accent);font-weight:600"></span></div>
       <div class="info-badge"><span id="zoomLevel">100%</span></div>
       <div class="layout-selector">
         <select id="layoutSelect" onchange="changeLayout(this.value)">
@@ -999,7 +1000,19 @@ function renderGraph() {
   emptyState.style.display = 'none';
   graphInfo.style.display = 'flex';
   document.getElementById('graphControls').style.display = 'flex';
-  // visibleNodes removed - info shown in left sidebar stats
+  
+  // Update stat counters to reflect filtered view
+  document.getElementById('statNodes').textContent = filteredNodes.length;
+  document.getElementById('statEdges').textContent = filteredLinks.length;
+  
+  // Update filter indicator
+  const filterEl = document.getElementById('filterIndicator');
+  if (selectedDocs.length > 0) {
+    const names = selectedDocs.map(id => documents.find(d => d.id === id)?.filename || id);
+    filterEl.textContent = `📄 ${names.join(', ')} (${filteredNodes.length}个实体)`;
+  } else {
+    filterEl.textContent = `全部 (${filteredNodes.length}个实体)`;
+  }
   
   g.selectAll('*').remove();
   
