@@ -105,6 +105,8 @@ python src/web/app.py
 }
 ```
 
+**安全说明**：`data/config.json` 已加入 `.gitignore`，不会被提交到仓库。API Key 通过浏览器界面输入（设置 → LLM 模型设置），不硬编码在代码中。
+
 ### 2.2 环境变量
 
 | 变量 | 说明 | 默认值 |
@@ -134,17 +136,18 @@ curl -X POST http://localhost:10001/api/settings/llm/test
 | 文件 | 职责 | 行数 |
 |------|------|------|
 | `main.py` | 启动入口 | 23 |
-| `api.py` | FastAPI 路由定义，请求/响应模型 | 584 |
+| `api.py` | FastAPI 路由定义，请求/响应模型，文档管理，配置管理 | 682 |
 | `config.py` | 配置加载/保存/合并 | 101 |
-| `database.py` | SQLite 数据库 CRUD + 统计 + 导入导出 | 578 |
-| `llm_client.py` | LLM 调用封装（DeepSeek + Ollama） | 166 |
+| `database.py` | SQLite 数据库 CRUD + 统计 + 导入导出 + 级联删除 + 示例数据清除 | 663 |
+| `llm_client.py` | LLM 调用封装（DeepSeek + Ollama，健壮 JSON 解析） | 292 |
 | `models.py` | Pydantic 数据模型定义 | 146 |
 | `entity_extractor.py` | 实体抽取（正则 + jieba + 关键词 + 词典） | 305 |
 | `relation_extractor.py` | 关系抽取（模式匹配 + 共现分析） | 252 |
-| `document_parser.py` | 文档解析（PDF/Word/MD/TXT） | 183 |
+| `document_parser.py` | 文档解析（PDF/Word/MD/TXT） | 186 |
 | `graph_store.py` | NetworkX 内存图 + SQLite 持久化 | 515 |
 | `graph_algorithms.py` | 图分析算法 | 321 |
 | `query_engine.py` | 正则意图识别查询引擎 | 293 |
+| `templates/index.html` | 前端 SPA（Vue3 + D3.js Neon Glow 主题） | 1865 |
 | `src/web/app.py` | 独立管理面板（备用入口） | 357 |
 
 ### 3.2 数据流
@@ -157,12 +160,13 @@ document_parser.py  → Document 对象
     │
     ▼
 llm_client.py       → {"entities": [...], "relations": [...]}
+    │                  （健壮 JSON 解析：三级提取 + 截断修复）
     │                  （或 entity_extractor.py + relation_extractor.py）
     ▼
-database.py         → SQLite 持久化
+database.py         → SQLite 持久化（关联 source_doc_ids）
     │
     ▼
-api.py              → 返回给前端
+api.py              → 返回给前端（支持 document_id 筛选）
 ```
 
 ### 3.3 双数据库层
@@ -171,10 +175,33 @@ api.py              → 返回给前端
 
 | 模块 | 使用者 | 特点 |
 |------|--------|------|
-| `database.py` | `api.py`（主入口） | 返回 dict，有 `ingest_tasks` 表，支持异步任务 |
+| `database.py` | `api.py`（主入口） | 返回 dict，有 `ingest_tasks` 表，支持异步任务，级联删除 |
 | `graph_store.py` | `src/web/app.py` + `graph_algorithms.py` | 返回 Pydantic 模型，有 NetworkX 内存图 |
 
 两者共享同一个 SQLite 文件 `data/graph.db`，Schema 基本一致（`database.py` 多了 `updated_at` 列和 `ingest_tasks` 表）。
+
+### 3.4 LLM JSON 解析策略
+
+`llm_client.py` 中实现了三级 JSON 提取 + 截断修复，确保 LLM 输出不稳定时仍能正确解析：
+
+```
+原始响应
+    │
+    ▼
+第一级：正则提取 { ... } 或 [ ... ]
+    │ (失败)
+    ▼
+第二级：提取 ```json ... ``` 代码块
+    │ (失败)
+    ▼
+第三级：找第一个 { 到最后一个 }
+    │
+    ▼
+修复阶段：_fix_json() + _fix_truncated_json()
+    ├── 移除尾部多余逗号
+    ├── 补全截断的字符串/数组/对象
+    └── 修复缺失的逗号
+```
 
 ---
 
@@ -327,37 +354,40 @@ async def get_my_algorithm(top_k: int = 10):
 | 技术 | 引入方式 | 用途 |
 |------|---------|------|
 | Vue 3 | CDN | 响应式数据绑定和组件化 |
-| D3.js | CDN | 力导向图谱可视化 |
+| D3.js | CDN | 力导向图谱可视化（Neon Glow 霓虹发光） |
 | ECharts | CDN | 统计图表 |
-| 原生 CSS | 本地文件 | 样式 + CSS 变量主题系统 |
+| 原生 CSS | 本地文件 | 样式 + Neon Glow 主题变量 |
 
 ### 6.2 文件结构
 
 ```
 templates/
-  index.html          # 前端 SPA（所有 JS 内联）
+  index.html          # 前端 SPA（所有 JS 内联，1865 行）
 static/
-  css/style.css       # 全局样式 + 主题变量
+  css/style.css       # 全局样式 + Neon Glow 主题变量
 ```
 
-### 6.3 主题系统
+### 6.3 Neon Glow 主题系统
 
 所有颜色通过 CSS 变量定义：
 
 ```css
 :root {
-    --bg-primary: #0f1117;
-    --bg-secondary: #1a1d24;
-    --text-primary: #e0e0e0;
-    --accent-color: #4a9eff;
-    /* ... */
-}
-
-[data-theme="light"] {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --text-primary: #333333;
-    /* ... */
+    --bg-primary: #0b0d13;
+    --bg-secondary: #12151c;
+    --bg-card: #181b24;
+    --text-primary: #d0d0d0;
+    --text-secondary: #7a7f8a;
+    --border-color: #1e2130;
+    /* Neon Glow 色系 */
+    --neon-blue: #4a9eff;
+    --neon-green: #4aff8e;
+    --neon-pink: #ff4a8d;
+    --neon-orange: #ff8c4a;
+    --neon-purple: #a855f7;
+    --neon-cyan: #22d3ee;
+    --neon-red: #ef4444;
+    --neon-yellow: #facc15;
 }
 ```
 
@@ -371,7 +401,18 @@ static/
 
 ## 七、测试
 
-### 7.1 手动测试
+### 7.1 内置测试文档
+
+项目在 `data/test_documents/` 下提供 4 篇行业分析文档，可用于功能测试：
+
+| 文档 | 主题 | 实体数 | 关系数 |
+|------|------|--------|--------|
+| AI 产业全景报告.docx | 人工智能产业链 | ~60 | ~40 |
+| 全球半导体产业链分析.docx | 半导体产业链 | ~50 | ~35 |
+| 大模型技术发展报告.docx | 大语言模型技术 | ~45 | ~30 |
+| 自动驾驶技术发展报告.docx | 自动驾驶技术 | ~95 | ~70 |
+
+### 7.2 手动测试
 
 ```bash
 # 启动服务
@@ -394,7 +435,7 @@ curl -X POST http://localhost:10001/api/query \
 curl http://localhost:10001/api/graph/data
 ```
 
-### 7.2 API 文档
+### 7.3 API 文档
 
 启动后访问 http://localhost:10001/docs 查看自动生成的 Swagger UI，可直接在页面上测试所有 API。
 
@@ -462,3 +503,10 @@ curl -X POST http://localhost:10001/api/graph/clear
 ### Q：两个入口（main.py 和 src/web/app.py）有什么区别？
 
 A：都连接同一个数据库，但 `api.py` 使用 `database.py`（支持异步任务），`src/web/app.py` 使用 `graph_store.py`（支持 NetworkX 内存图）。建议使用 `main.py` 作为主入口。
+
+### Q：LLM 返回的 JSON 解析失败怎么办？
+
+A：`llm_client.py` 内置三级提取 + 截断修复，覆盖绝大多数 LLM 输出格式问题。如果仍失败，检查：
+1. API Key 是否正确配置
+2. 模型是否支持 JSON 输出
+3. 文本是否过长导致截断（可调小 `max_tokens`）
