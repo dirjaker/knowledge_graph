@@ -86,6 +86,7 @@ class Database:
                     status TEXT DEFAULT 'processing',
                     input_type TEXT DEFAULT 'text',
                     input_text TEXT DEFAULT '',
+                    filename TEXT DEFAULT '',
                     entities_json TEXT DEFAULT '[]',
                     relations_json TEXT DEFAULT '[]',
                     error TEXT DEFAULT '',
@@ -98,6 +99,24 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target_entity);
                 CREATE INDEX IF NOT EXISTS idx_relations_type ON relations(relation_type);
             """)
+
+            # 自动迁移：给旧表添加缺失的列
+            self._migrate(conn)
+
+    # ==================== 自动迁移 ====================
+
+    def _migrate(self, conn):
+        """自动迁移：给旧表添加缺失的列"""
+        migrations = [
+            ("ingest_tasks", "filename", "TEXT DEFAULT ''"),
+            ("documents", "file_path", "TEXT DEFAULT ''"),
+            ("entities", "source_doc_ids", "TEXT DEFAULT '[]'"),
+        ]
+        for table, column, col_type in migrations:
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+            except sqlite3.OperationalError:
+                pass  # 列已存在
 
     # ==================== 实体操作 ====================
 
