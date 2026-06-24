@@ -8,12 +8,12 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg-primary:#13161d;
-  --bg-secondary:#0e1017;
-  --bg-tertiary:#181b24;
-  --bg-elevated:#1a1c24;
-  --border:#1e2128;
-  --border-subtle:#181b22;
+  --bg-primary:#1c1f28;
+  --bg-secondary:#16181f;
+  --bg-tertiary:#22262f;
+  --bg-elevated:#242830;
+  --border:#2a2e38;
+  --border-subtle:#22262e;
   --text-primary:#e2e8f0;
   --text-secondary:#94a3b8;
   --text-muted:#64748b;
@@ -1017,7 +1017,7 @@ function renderGraph() {
     .attr('orient', 'auto')
     .append('path')
     .attr('d', 'M0,-4L10,0L0,4')
-    .attr('fill', '#334155');
+    .attr('fill', '#6b7280');
   
   // Node glow filter
   const filter = defs.append('filter')
@@ -1040,8 +1040,9 @@ function renderGraph() {
     .data(filteredLinks)
     .join('path')
     .attr('fill', 'none')
-    .attr('stroke', '#1e293b')
-    .attr('stroke-width', d => Math.max(1.5, d.weight || 1.5))
+    .attr('stroke', '#4a5568')
+    .attr('stroke-width', d => Math.max(2, d.weight || 2))
+    .attr('opacity', 0.7)
     .attr('marker-end', 'url(#arrowhead)');
   
   // Link labels
@@ -1052,7 +1053,7 @@ function renderGraph() {
     .join('text')
     .text(d => d.type)
     .attr('font-size', '10px')
-    .attr('fill', '#475569')
+    .attr('fill', '#9ca3af')
     .attr('text-anchor', 'middle')
     .attr('dy', -6)
     .style('pointer-events', 'none');
