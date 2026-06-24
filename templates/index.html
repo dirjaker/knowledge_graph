@@ -948,31 +948,22 @@ function showReviewModal(task) {
 async function confirmDocument() {
   if (!currentReviewTask) return;
   
-  let newDocId = null;
   try {
-    const result = await API.post('/api/documents/ingest-confirm', {
+    await API.post('/api/documents/ingest-confirm', {
       task_id: currentReviewTask.id,
       entities: currentReviewTask.entities || [],
       relations: currentReviewTask.relations || []
     });
-    newDocId = result.document_id;
   } catch (err) {
     console.error('确认导入失败:', err);
   }
   
   currentReviewTask = null;
   closeModal('reviewModal');
+  
+  // 重新加载全部数据（默认全局视图：显示所有文档的实体）
   await loadData();
   await loadDocuments();
-  
-  // 自动选中新导入的文档，显示其图谱
-  if (newDocId) {
-    selectedDocs = [newDocId];
-    updateDocumentList();
-    updateFilterTags();
-    renderGraph();
-    setTimeout(fitToNodes, 350);
-  }
 }
 
 // ============================================================
