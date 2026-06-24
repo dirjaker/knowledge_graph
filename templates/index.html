@@ -948,12 +948,14 @@ function showReviewModal(task) {
 async function confirmDocument() {
   if (!currentReviewTask) return;
   
+  let newDocId = null;
   try {
-    await API.post('/api/documents/ingest-confirm', {
+    const result = await API.post('/api/documents/ingest-confirm', {
       task_id: currentReviewTask.id,
       entities: currentReviewTask.entities || [],
       relations: currentReviewTask.relations || []
     });
+    newDocId = result.document_id;
   } catch (err) {
     console.error('确认导入失败:', err);
   }
@@ -962,6 +964,15 @@ async function confirmDocument() {
   closeModal('reviewModal');
   await loadData();
   await loadDocuments();
+  
+  // 自动选中新导入的文档，显示其图谱
+  if (newDocId) {
+    selectedDocs = [newDocId];
+    updateDocumentList();
+    updateFilterTags();
+    renderGraph();
+    setTimeout(fitToNodes, 350);
+  }
 }
 
 // ============================================================
@@ -1742,7 +1753,12 @@ async function reviewDocument(docId) {
 async function deleteDocument(docId) {
   if (confirm('确定删除此文档？')) {
     await API.del(`/api/documents/${docId}`);
+    // 清理选中状态
+    const idx = selectedDocs.indexOf(docId);
+    if (idx !== -1) selectedDocs.splice(idx, 1);
+    await loadData();
     await loadDocuments();
+    updateFilterTags();
   }
 }
 

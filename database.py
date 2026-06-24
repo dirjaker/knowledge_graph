@@ -123,14 +123,18 @@ class Database:
     def add_entity(self, name: str, entity_type: str = "other",
                    description: str = "", properties: dict = None,
                    confidence: float = 1.0, source_doc_ids: list = None) -> str:
-        """添加或更新实体，返回实体ID"""
+        """添加或更新实体，返回实体ID。更新时合并 source_doc_ids"""
         entity_id = f"e_{uuid.uuid4().hex[:12]}"
+        new_doc_ids = source_doc_ids or []
         with self._conn() as conn:
             existing = conn.execute(
-                "SELECT id FROM entities WHERE name = ?", (name,)
+                "SELECT id, source_doc_ids FROM entities WHERE name = ?", (name,)
             ).fetchone()
             if existing:
                 entity_id = existing["id"]
+                # 合并 source_doc_ids：保留旧的，加入新的（去重）
+                old_doc_ids = json.loads(existing["source_doc_ids"]) if existing["source_doc_ids"] else []
+                merged_ids = list(dict.fromkeys(old_doc_ids + new_doc_ids))  # 保序去重
                 conn.execute("""
                     UPDATE entities SET entity_type=?, description=?,
                     properties=?, confidence=?, source_doc_ids=?,
@@ -139,7 +143,7 @@ class Database:
                     entity_type, description,
                     json.dumps(properties or {}, ensure_ascii=False),
                     confidence,
-                    json.dumps(source_doc_ids or [], ensure_ascii=False),
+                    json.dumps(merged_ids, ensure_ascii=False),
                     entity_id
                 ))
             else:
@@ -252,19 +256,26 @@ class Database:
                      evidence: str = "", weight: float = 1.0,
                      confidence: float = 1.0,
                      source_doc_ids: list = None) -> str:
-        """添加或累加关系"""
+        """添加或累加关系，更新时合并 source_doc_ids"""
+        new_doc_ids = source_doc_ids or []
         with self._conn() as conn:
             existing = conn.execute("""
-                SELECT id, weight FROM relations
+                SELECT id, weight, source_doc_ids FROM relations
                 WHERE source_entity=? AND target_entity=? AND relation_type=?
             """, (source, target, relation_type)).fetchone()
 
             if existing:
                 new_weight = existing["weight"] + weight
+                # 合并 source_doc_ids
+                old_doc_ids = json.loads(existing["source_doc_ids"]) if existing["source_doc_ids"] else []
+                merged_ids = list(dict.fromkeys(old_doc_ids + new_doc_ids))
                 conn.execute("""
-                    UPDATE relations SET weight=?, confidence=?, evidence=?
+                    UPDATE relations SET weight=?, confidence=?, evidence=?,
+                    source_doc_ids=?
                     WHERE id=?
-                """, (new_weight, confidence, evidence, existing["id"]))
+                """, (new_weight, confidence, evidence,
+                      json.dumps(merged_ids, ensure_ascii=False),
+                      existing["id"]))
                 return existing["id"]
             else:
                 rel_id = f"r_{uuid.uuid4().hex[:12]}"
