@@ -7,6 +7,10 @@
 import os
 import json
 from pathlib import Path
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
 
 # 基础路径
 BASE_DIR = Path(__file__).parent
@@ -49,12 +53,21 @@ def load_config() -> dict:
                 saved = json.load(f)
             # 合并默认配置（补全新增字段）
             merged = _deep_merge(DEFAULT_CONFIG, saved)
+            # 环境变量覆盖 API Key
+            env_key = os.getenv("LLM_API_KEY")
+            if env_key:
+                merged["llm"]["api_key"] = env_key
             return merged
         except (json.JSONDecodeError, KeyError):
             pass
     # 写入默认配置
     save_config(DEFAULT_CONFIG)
-    return DEFAULT_CONFIG.copy()
+    config = DEFAULT_CONFIG.copy()
+    # 环境变量覆盖 API Key
+    env_key = os.getenv("LLM_API_KEY")
+    if env_key:
+        config["llm"]["api_key"] = env_key
+    return config
 
 
 def save_config(config: dict):
