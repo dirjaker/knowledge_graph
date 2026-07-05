@@ -348,7 +348,7 @@ async def web_ui():
 # 启动入口
 # ============================================================
 
-def run_server(host: str = "0.0.0.0", port: int = 8002):
+def run_server(host: str = "0.0.0.0", port: int = 10002):
     import uvicorn
     uvicorn.run(app, host=host, port=port, log_level="info")
 

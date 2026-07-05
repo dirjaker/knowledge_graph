@@ -35,7 +35,7 @@ DEFAULT_CONFIG = {
     },
     "server": {
         "host": "0.0.0.0",
-        "port": 10001,
+        "port": 10002,
     },
     "graph": {
         "max_nodes": 500,               # 单次查询最大节点数

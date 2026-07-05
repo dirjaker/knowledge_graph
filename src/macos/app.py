@@ -27,7 +27,7 @@ class KnowledgeGraphApp:
 
         self.server_thread = None
         self.server_running = False
-        self.port = 8002
+        self.port = 10002
 
         self._build_ui()
 

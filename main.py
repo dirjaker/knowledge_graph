@@ -2,7 +2,7 @@
 知识图谱系统 - FastAPI 主入口
 
 启动: python main.py
-或:   uvicorn api:app --host 0.0.0.0 --port 8002 --reload
+|或:   uvicorn api:app --host 0.0.0.0 --port 10002 --reload
 """
 
 import uvicorn
